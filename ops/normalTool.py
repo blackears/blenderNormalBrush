@@ -7,6 +7,8 @@ import math
 from gpu_extras.batch import batch_for_shader
 
 
+circleCoords = [(math.sin(((2 * math.pi * i) / 32)), math.cos((math.pi * 2 * i) / 32), 0) for i in range(33)]
+
 
 def draw_callback(self, context):
 #    print("draw_callback_px");
@@ -16,6 +18,7 @@ def draw_callback(self, context):
     coords = [(0, 0, 0), (0, 0, 1)]
     shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
     batch = batch_for_shader(shader, 'LINES', {"pos": coords})
+    batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": circleCoords})
 
     shader.bind();
     shader.uniform_float("color", (1, 1, 0, 1))
@@ -29,8 +32,8 @@ def draw_callback(self, context):
     for obj in ctx.selected_objects:
 #    for obj in context.scene.objects:
         if obj.type == 'MESH':
+            success = obj.update_from_editmode()
             mesh = obj.data
-            mesh.update()
 
             gpu.matrix.push()
             gpu.matrix.multiply_matrix(obj.matrix_world)
@@ -66,16 +69,31 @@ def draw_callback(self, context):
 #                    m = mT
 #                    print (m)
                     
-#                    binorm = v.normal.cross(tan)
-                    batchAxis = batch_for_shader(shader, 'LINES', {"pos": [v.co, v.co + axis]})
-                    shader.uniform_float("color", (1, 0, 1, 1))
-                    batchAxis.draw(shader)
+#                    batchAxis = batch_for_shader(shader, 'LINES', {"pos": [v.co, v.co + axis]})
+#                    shader.uniform_float("color", (1, 0, 1, 1))
+#                    batchAxis.draw(shader)
 
             
                     gpu.matrix.push()
                     gpu.matrix.multiply_matrix(m)
                     shader.uniform_float("color", (1, 1, 0, 1))
                     batch.draw(shader)
+                    
+                    gpu.matrix.push()
+                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'Y'))
+                    shader.uniform_float("color", (1, 0, 0, 1))
+                    batchCircle.draw(shader)
+                    gpu.matrix.pop()
+                    
+                    gpu.matrix.push()
+                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X'))
+                    shader.uniform_float("color", (0, 1, 0, 1))
+                    batchCircle.draw(shader)
+                    gpu.matrix.pop()
+
+                    shader.uniform_float("color", (0, 0, 1, 1))
+                    batchCircle.draw(shader)
+                    
                     gpu.matrix.pop()
 
             gpu.matrix.pop()
@@ -110,6 +128,12 @@ class ModalDrawOperator(bpy.types.Operator):
 
     def modal(self, context, event):
         self._context = context
+
+#        for obj in context.selected_objects:
+#            if obj.type == 'MESH':
+#                mesh = obj.data
+#                success = mesh.update_from_editmode()
+            
         context.area.tag_redraw()
 
         if event.type == 'MOUSEMOVE':
