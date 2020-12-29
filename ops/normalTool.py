@@ -3,12 +3,14 @@ import bgl
 import blf
 import gpu
 import mathutils
+import math
 from gpu_extras.batch import batch_for_shader
 
 
 
 def draw_callback(self, context):
-    print("draw_callback_px");
+#    print("draw_callback_px");
+    ctx = bpy.context
     
 #    coords = [(1, 1, 1), (-2, 0, 0), (-2, -1, 3), (0, 1, 1)]
     coords = [(0, 0, 0), (0, 0, 1)]
@@ -19,14 +21,63 @@ def draw_callback(self, context):
     shader.uniform_float("color", (1, 1, 0, 1))
 
 #    batch.draw(shader)
+    vecZ = mathutils.Vector((0, 0, 1))
+    vecX = mathutils.Vector((1, 0, 0))
 
-#    for obj in context.selected_objects:
-    for obj in context.scene.objects:
+#    bpy.context.scene.update()
+
+    for obj in ctx.selected_objects:
+#    for obj in context.scene.objects:
         if obj.type == 'MESH':
+            mesh = obj.data
+            mesh.update()
+
             gpu.matrix.push()
             gpu.matrix.multiply_matrix(obj.matrix_world)
     
-            batch.draw(shader)
+#            bm = bmesh.new()
+#            bm.from_mesh(mesh)
+#            for v in bm.verts:
+#bm.to_mesh(me)
+#bm.free()
+
+            for v in mesh.vertices:
+                if v.select:
+#                    v.co
+                    axis = v.normal.cross(vecZ)
+                    if axis.length_squared < .0001:
+                        axis = matutils.Vector(vecX)
+                    else:
+                        axis.normalize()
+                    angle = -math.acos(v.normal.dot(vecZ))
+                    
+                    quat = mathutils.Quaternion(axis, angle)
+#                    print (quat)
+
+                    mR = quat.to_matrix()
+#                    print (mR)
+                    mR.resize_4x4()
+#                    print (mR)
+                    
+                    mT = mathutils.Matrix.Translation(v.co)
+#                    print (mT)
+
+                    m = mT @ mR
+#                    m = mT
+#                    print (m)
+                    
+#                    binorm = v.normal.cross(tan)
+                    batchAxis = batch_for_shader(shader, 'LINES', {"pos": [v.co, v.co + axis]})
+                    shader.uniform_float("color", (1, 0, 1, 1))
+                    batchAxis.draw(shader)
+
+            
+                    gpu.matrix.push()
+                    gpu.matrix.multiply_matrix(m)
+                    shader.uniform_float("color", (1, 1, 0, 1))
+                    batch.draw(shader)
+                    gpu.matrix.pop()
+
             gpu.matrix.pop()
 
 #    print("mouse points", len(self.mouse_path))
@@ -55,23 +106,29 @@ def draw_callback(self, context):
 class ModalDrawOperator(bpy.types.Operator):
     """Draw a line with the mouse"""
     bl_idname = "view3d.normal_tool"
-    bl_label = "Normal Tool"
+    bl_label = "Normal Tool Kitfox"
 
     def modal(self, context, event):
+        self._context = context
         context.area.tag_redraw()
 
         if event.type == 'MOUSEMOVE':
-            self.mouse_path.append((event.mouse_region_x, event.mouse_region_y))
+#            self.mouse_path.append((event.mouse_region_x, event.mouse_region_y))
+            pass
 
         elif event.type == 'LEFTMOUSE':
-            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-            return {'FINISHED'}
+#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+#            return {'FINISHED'}
+            pass
 
-        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+#        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+        elif event.type in {'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            print("norm tool cancelled")
             return {'CANCELLED'}
 
-        return {'RUNNING_MODAL'}
+        return {'PASS_THROUGH'}
+#        return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
         if context.area.type == 'VIEW_3D':
@@ -79,6 +136,7 @@ class ModalDrawOperator(bpy.types.Operator):
             args = (self, context)
             # Add the region OpenGL drawing callback
             # draw in view space with 'POST_VIEW' and 'PRE_VIEW'
+            self._context = context
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
             self.mouse_path = []
