@@ -1,1 +1,3 @@
 /test/*.blend1
+/ops/modalDraw.py
+/ops/openGlTestHandler.py
