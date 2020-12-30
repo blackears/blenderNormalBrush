@@ -15,8 +15,20 @@ circleCoords = [(math.sin(((2 * math.pi * i) / circleSegs)), math.cos((math.pi *
 def draw_callback(self, context):
 #    print("draw_callback_px");
     ctx = bpy.context
-    
-#    coords = [(1, 1, 1), (-2, 0, 0), (-2, -1, 3), (0, 1, 1)]
+
+    region = context.region
+    rv3d = context.region_data
+#    coord = event.mouse_region_x, event.mouse_region_y
+
+    viewport_center = (region.x + region.width / 2, region.y + region.height / 2)
+    view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, viewport_center)
+    ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, viewport_center)
+
+    # get the ray from the viewport and mouse
+#    view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
+#    ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
+
+
     coords = [(0, 0, 0), (0, 0, 1)]
     shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
     batch = batch_for_shader(shader, 'LINES', {"pos": coords})
@@ -25,11 +37,8 @@ def draw_callback(self, context):
     shader.bind();
     shader.uniform_float("color", (1, 1, 0, 1))
 
-#    batch.draw(shader)
     vecZ = mathutils.Vector((0, 0, 1))
     vecX = mathutils.Vector((1, 0, 0))
-
-#    bpy.context.scene.update()
 
     for obj in ctx.selected_objects:
 #    for obj in context.scene.objects:
@@ -56,6 +65,14 @@ def draw_callback(self, context):
                     mIT.transpose()
                     norm = mIT @ norm
                     norm.resize_3d()
+                    norm.normalize()
+
+                    eye_offset = pos - ray_origin
+                    eye_offset_along_view = eye_offset.project(view_vector)
+#                    print(eye_offset_along_view)
+#                    radius = eye_offset_along_view.length / 5
+                    radius = eye_offset.length / 5
+                    mS = mathutils.Matrix.Scale(radius, 4)
                     
                     axis = norm.cross(vecZ)
                     if axis.length_squared < .0001:
@@ -75,7 +92,7 @@ def draw_callback(self, context):
                     mT = mathutils.Matrix.Translation(pos)
 #                    print (mT)
 
-                    m = mT @ mR
+                    m = mT @ mR @ mS
 #                    m = mT
 #                    print (m)
                     
