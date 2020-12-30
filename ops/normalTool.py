@@ -5,9 +5,11 @@ import gpu
 import mathutils
 import math
 from gpu_extras.batch import batch_for_shader
+from bpy_extras import view3d_utils
 
 
-circleCoords = [(math.sin(((2 * math.pi * i) / 32)), math.cos((math.pi * 2 * i) / 32), 0) for i in range(33)]
+circleSegs = 64
+circleCoords = [(math.sin(((2 * math.pi * i) / circleSegs)), math.cos((math.pi * 2 * i) / circleSegs), 0) for i in range(circleSegs + 1)]
 
 
 def draw_callback(self, context):
@@ -35,8 +37,6 @@ def draw_callback(self, context):
             success = obj.update_from_editmode()
             mesh = obj.data
 
-            gpu.matrix.push()
-            gpu.matrix.multiply_matrix(obj.matrix_world)
     
 #            bm = bmesh.new()
 #            bm.from_mesh(mesh)
@@ -46,13 +46,23 @@ def draw_callback(self, context):
 
             for v in mesh.vertices:
                 if v.select:
-#                    v.co
-                    axis = v.normal.cross(vecZ)
+                    pos = obj.matrix_world @ v.co
+                
+                    norm = v.normal.copy()
+                    norm.resize_4d()
+                    norm.w = 0
+                    mIT = obj.matrix_world.copy()
+                    mIT.invert()
+                    mIT.transpose()
+                    norm = mIT @ norm
+                    norm.resize_3d()
+                    
+                    axis = norm.cross(vecZ)
                     if axis.length_squared < .0001:
                         axis = matutils.Vector(vecX)
                     else:
                         axis.normalize()
-                    angle = -math.acos(v.normal.dot(vecZ))
+                    angle = -math.acos(norm.dot(vecZ))
                     
                     quat = mathutils.Quaternion(axis, angle)
 #                    print (quat)
@@ -62,7 +72,7 @@ def draw_callback(self, context):
                     mR.resize_4x4()
 #                    print (mR)
                     
-                    mT = mathutils.Matrix.Translation(v.co)
+                    mT = mathutils.Matrix.Translation(pos)
 #                    print (mT)
 
                     m = mT @ mR
@@ -96,7 +106,6 @@ def draw_callback(self, context):
                     
                     gpu.matrix.pop()
 
-            gpu.matrix.pop()
 
 #    print("mouse points", len(self.mouse_path))
 
@@ -120,6 +129,17 @@ def draw_callback(self, context):
 #    bgl.glLineWidth(1)
 #    bgl.glDisable(bgl.GL_BLEND)
 
+def manip_normal(context, event):
+    region = context.region
+    rv3d = context.region_data
+    coord = event.mouse_region_x, event.mouse_region_y
+
+    # get the ray from the viewport and mouse
+    view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
+    ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
+
+    ray_target = ray_origin + view_vector
+
 
 class ModalDrawOperator(bpy.types.Operator):
     """Draw a line with the mouse"""
@@ -127,7 +147,7 @@ class ModalDrawOperator(bpy.types.Operator):
     bl_label = "Normal Tool Kitfox"
 
     def modal(self, context, event):
-        self._context = context
+#        self._context = context
 
 #        for obj in context.selected_objects:
 #            if obj.type == 'MESH':
@@ -136,17 +156,20 @@ class ModalDrawOperator(bpy.types.Operator):
             
         context.area.tag_redraw()
 
-        if event.type == 'MOUSEMOVE':
+        if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            # allow navigation
+            return {'PASS_THROUGH'}
+
+        elif event.type == 'MOUSEMOVE':
 #            self.mouse_path.append((event.mouse_region_x, event.mouse_region_y))
             pass
-
         elif event.type == 'LEFTMOUSE':
 #            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
 #            return {'FINISHED'}
+            manip_normal(context, event)
             pass
 
-#        elif event.type in {'RIGHTMOUSE', 'ESC'}:
-        elif event.type in {'ESC'}:
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             print("norm tool cancelled")
             return {'CANCELLED'}
