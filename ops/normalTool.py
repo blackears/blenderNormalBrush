@@ -11,6 +11,50 @@ from bpy_extras import view3d_utils
 circleSegs = 64
 circleCoords = [(math.sin(((2 * math.pi * i) / circleSegs)), math.cos((math.pi * 2 * i) / circleSegs), 0) for i in range(circleSegs + 1)]
 
+vecZ = mathutils.Vector((0, 0, 1))
+vecX = mathutils.Vector((1, 0, 0))
+
+def calc_gizmo_transform(obj, coord, normal, ray_origin):
+    pos = obj.matrix_world @ coord
+
+    norm = normal.copy()
+    norm.resize_4d()
+    norm.w = 0
+    mIT = obj.matrix_world.copy()
+    mIT.invert()
+    mIT.transpose()
+    norm = mIT @ norm
+    norm.resize_3d()
+    norm.normalize()
+
+    eye_offset = pos - ray_origin
+#                    eye_offset_along_view = eye_offset.project(view_vector)
+#                    print(eye_offset_along_view)
+#                    radius = eye_offset_along_view.length / 5
+    radius = eye_offset.length / 5
+    mS = mathutils.Matrix.Scale(radius, 4)
+    
+    axis = norm.cross(vecZ)
+    if axis.length_squared < .0001:
+        axis = matutils.Vector(vecX)
+    else:
+        axis.normalize()
+    angle = -math.acos(norm.dot(vecZ))
+    
+    quat = mathutils.Quaternion(axis, angle)
+#                    print (quat)
+
+    mR = quat.to_matrix()
+#                    print (mR)
+    mR.resize_4x4()
+#                    print (mR)
+    
+    mT = mathutils.Matrix.Translation(pos)
+#                    print (mT)
+
+    m = mT @ mR @ mS
+    return m
+
 
 def draw_callback(self, context):
 #    print("draw_callback_px");
@@ -37,11 +81,8 @@ def draw_callback(self, context):
     shader.bind();
     shader.uniform_float("color", (1, 1, 0, 1))
 
-    vecZ = mathutils.Vector((0, 0, 1))
-    vecX = mathutils.Vector((1, 0, 0))
 
     for obj in ctx.selected_objects:
-#    for obj in context.scene.objects:
         if obj.type == 'MESH':
             success = obj.update_from_editmode()
             mesh = obj.data
@@ -55,50 +96,8 @@ def draw_callback(self, context):
 
             for v in mesh.vertices:
                 if v.select:
-                    pos = obj.matrix_world @ v.co
-                
-                    norm = v.normal.copy()
-                    norm.resize_4d()
-                    norm.w = 0
-                    mIT = obj.matrix_world.copy()
-                    mIT.invert()
-                    mIT.transpose()
-                    norm = mIT @ norm
-                    norm.resize_3d()
-                    norm.normalize()
-
-                    eye_offset = pos - ray_origin
-                    eye_offset_along_view = eye_offset.project(view_vector)
-#                    print(eye_offset_along_view)
-#                    radius = eye_offset_along_view.length / 5
-                    radius = eye_offset.length / 5
-                    mS = mathutils.Matrix.Scale(radius, 4)
                     
-                    axis = norm.cross(vecZ)
-                    if axis.length_squared < .0001:
-                        axis = matutils.Vector(vecX)
-                    else:
-                        axis.normalize()
-                    angle = -math.acos(norm.dot(vecZ))
-                    
-                    quat = mathutils.Quaternion(axis, angle)
-#                    print (quat)
-
-                    mR = quat.to_matrix()
-#                    print (mR)
-                    mR.resize_4x4()
-#                    print (mR)
-                    
-                    mT = mathutils.Matrix.Translation(pos)
-#                    print (mT)
-
-                    m = mT @ mR @ mS
-#                    m = mT
-#                    print (m)
-                    
-#                    batchAxis = batch_for_shader(shader, 'LINES', {"pos": [v.co, v.co + axis]})
-#                    shader.uniform_float("color", (1, 0, 1, 1))
-#                    batchAxis.draw(shader)
+                    m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
 
             
                     gpu.matrix.push()
