@@ -175,6 +175,9 @@ class ModalDrawOperator(bpy.types.Operator):
     prop_strength : bpy.props.FloatProperty(
         name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
     )
+
+    prop_normal = bpy.props.FloatVectorProperty(name="Normal", description="Direction of normal in Fixed mode", default = (0, 1, 0))
+    prop_target = bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
     
     dragging = False
 
@@ -308,17 +311,23 @@ class NormalToolPropsPanel(bpy.types.Panel):
 #        row = layout.row()
 #        row.label(text="walla - Tool Properties", icon='WORLD_DATA')
 
+        props = layout.operator(ModalDrawOperator.bl_idname)
+
         row = layout.row()
         row.prop(obj, "kitfox_nt_brush_type", expand=True)
-        
-        props = layout.operator(ModalDrawOperator.bl_idname)
         props.prop_brush_type = obj.kitfox_nt_brush_type
 
         row = layout.row()
         row.prop(obj, "kitfox_nt_strength", expand=True)
-        
-        props = layout.operator(ModalDrawOperator.bl_idname)
         props.prop_strength = obj.kitfox_nt_strength
+
+        row = layout.row()
+        row.prop(obj, "kitfox_nt_normal", expand=True)
+        props.prop_normal = obj.kitfox_nt_normal
+
+        row = layout.row()
+        row.prop(obj, "kitfox_nt_target", expand=True)
+        props.prop_target = obj.kitfox_nt_target
         
 #        row = layout.row()
 #        row.operator("kitfox.normal_tool")
@@ -334,6 +343,8 @@ def register():
         default='FIXED'
     )
     bpy.types.Object.kitfox_nt_strength = bpy.props.FloatProperty(name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1)
+    bpy.types.Object.kitfox_nt_normal = bpy.props.FloatVectorProperty(name="Normal", description="Direction of normal in Fixed mode", default = (0, 1, 0))
+    bpy.types.Object.kitfox_nt_target = bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
     
     bpy.utils.register_class(ModalDrawOperator)
     bpy.utils.register_class(NormalToolPanel)
@@ -348,6 +359,8 @@ def unregister():
     
     del bpy.types.Object.kitfox_nt_brush_type
     del bpy.types.Object.kitfox_nt_strength
+    del bpy.types.Object.kitfox_nt_normal
+    del bpy.types.Object.kitfox_nt_target
 
 
 if __name__ == "__main__":
