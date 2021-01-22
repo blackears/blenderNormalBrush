@@ -159,8 +159,57 @@ def manip_normal(context, event):
 
 class ModalDrawOperator(bpy.types.Operator):
     """Draw a line with the mouse"""
-    bl_idname = "view3d.normal_tool"
+    bl_idname = "kitfox.normal_tool"
     bl_label = "Normal Tool Kitfox"
+
+
+    my_enum : bpy.props.EnumProperty(
+        items=(
+            ('ONE', "One", ""),
+            ('TWO', "Two", ""),
+            ('THREE', "Three", "")
+        ),
+        default='ONE'
+    )
+    
+    dragging = False
+
+    def mouse_down(self, context, event):
+        mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+
+        ctx = bpy.context
+
+        region = context.region
+        rv3d = context.region_data
+    #    coord = event.mouse_region_x, event.mouse_region_y
+
+#        viewport_center = (region.x + region.width / 2, region.y + region.height / 2)
+        view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
+        ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
+        
+        center = None
+        center_count = 0
+
+        for obj in ctx.selected_objects:
+            if obj.type == 'MESH':
+                success = obj.update_from_editmode()
+                mesh = obj.data
+                mesh.use_auto_smooth = True
+                
+                for v in mesh.vertices:
+                    if v.select:
+                        if center_count == 0:
+                            center = v.co
+                        else:
+                            center += v.co
+                        center_count += 1
+                        
+                        m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
+
+
+        self.drag_start_pos = mouse_pos
+            
+        pass
 
     def modal(self, context, event):
 #        self._context = context
@@ -182,7 +231,8 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':
 #            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
 #            return {'FINISHED'}
-            manip_normal(context, event)
+            self.mouse_down(context, event)
+#            manip_normal(context, event)
             pass
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
@@ -211,12 +261,80 @@ class ModalDrawOperator(bpy.types.Operator):
             return {'CANCELLED'}
 
 
+class NormalToolPanel(bpy.types.Panel):
+
+    """Panel for the Normal Tool on tool shelf"""
+    bl_label = "Normal Tool Panel"
+    bl_idname = "3D_VIEW_PT_normal_tool"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+#    bl_context = "object"
+
+    def draw(self, context):
+        layout = self.layout
+
+        obj = context.object
+
+        row = layout.row()
+        row.operator("kitfox.normal_tool")
+
+class NormalToolPropsPanel(bpy.types.Panel):
+
+    """Properties Panel for the Normal Tool on tool shelf"""
+    bl_label = "Normal Tool Properties Panel"
+    bl_idname = "3D_VIEW_PT_normal_tool_props"
+    bl_space_type = 'VIEW_3D'
+#    bl_region_type = 'TOOL_PROPS'
+    bl_region_type = 'UI'
+#    bl_context = "object"
+
+    def draw(self, context):
+        layout = self.layout
+
+        obj = context.object
+
+#        row = layout.row()
+#        row.label(text="Tool Settings", icon='WORLD_DATA')
+
+#        row = layout.row()
+#        row.label(text="Active object is: " + obj.name)
+#        row = layout.row()
+#        row.prop(obj, "name")
+
+        row = layout.row()
+        row.label(text="walla - Tool Properties", icon='WORLD_DATA')
+
+        row = layout.row()
+        row.prop(obj, "kitfox_nt_strength", expand=True)
+        
+        props = layout.operator(ModalDrawOperator.bl_idname)
+        props.my_enum = obj.kitfox_nt_strength        
+#        row = layout.row()
+#        row.operator("kitfox.normal_tool")
+
+
 def register():
+    bpy.types.Object.kitfox_nt_strength = bpy.props.EnumProperty(
+        items=(
+            ('ONE', "One", ""),
+            ('TWO', "Two", ""),
+            ('THREE', "Three", "")
+        ),
+        default='TWO'
+    )
+    
     bpy.utils.register_class(ModalDrawOperator)
+    bpy.utils.register_class(NormalToolPanel)
+    bpy.utils.register_class(NormalToolPropsPanel)
+
 
 
 def unregister():
     bpy.utils.unregister_class(ModalDrawOperator)
+    bpy.utils.unregister_class(NormalToolPanel)
+    bpy.utils.unregister_class(NormalToolPropsPanel)
+    
+    del bpy.types.Object.kitfox_nt_strength
 
 
 if __name__ == "__main__":
