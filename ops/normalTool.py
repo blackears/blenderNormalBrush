@@ -163,13 +163,17 @@ class ModalDrawOperator(bpy.types.Operator):
     bl_label = "Normal Tool Kitfox"
 
 
-    my_enum : bpy.props.EnumProperty(
+    prop_brush_type : bpy.props.EnumProperty(
         items=(
-            ('ONE', "One", ""),
-            ('TWO', "Two", ""),
-            ('THREE', "Three", "")
+            ('FIXED', "Fixed", "Normals are in a fixed direction"),
+            ('ATTRACT', "Attract", "Normals point toward target object"),
+            ('REPEL', "Repel", "Normals point away from target object")
         ),
-        default='ONE'
+        default='FIXED'
+    )
+    
+    prop_strength : bpy.props.FloatProperty(
+        name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
     )
     
     dragging = False
@@ -301,27 +305,35 @@ class NormalToolPropsPanel(bpy.types.Panel):
 #        row = layout.row()
 #        row.prop(obj, "name")
 
+#        row = layout.row()
+#        row.label(text="walla - Tool Properties", icon='WORLD_DATA')
+
         row = layout.row()
-        row.label(text="walla - Tool Properties", icon='WORLD_DATA')
+        row.prop(obj, "kitfox_nt_brush_type", expand=True)
+        
+        props = layout.operator(ModalDrawOperator.bl_idname)
+        props.prop_brush_type = obj.kitfox_nt_brush_type
 
         row = layout.row()
         row.prop(obj, "kitfox_nt_strength", expand=True)
         
         props = layout.operator(ModalDrawOperator.bl_idname)
-        props.my_enum = obj.kitfox_nt_strength        
+        props.prop_strength = obj.kitfox_nt_strength
+        
 #        row = layout.row()
 #        row.operator("kitfox.normal_tool")
 
 
 def register():
-    bpy.types.Object.kitfox_nt_strength = bpy.props.EnumProperty(
+    bpy.types.Object.kitfox_nt_brush_type = bpy.props.EnumProperty(
         items=(
-            ('ONE', "One", ""),
-            ('TWO', "Two", ""),
-            ('THREE', "Three", "")
+            ('FIXED', "Fixed", "Normals are in a fixed direction"),
+            ('ATTRACT', "Attract", "Normals point toward target object"),
+            ('REPEL', "Repel", "Normals point away from target object")
         ),
-        default='TWO'
+        default='FIXED'
     )
+    bpy.types.Object.kitfox_nt_strength = bpy.props.FloatProperty(name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1)
     
     bpy.utils.register_class(ModalDrawOperator)
     bpy.utils.register_class(NormalToolPanel)
@@ -334,6 +346,7 @@ def unregister():
     bpy.utils.unregister_class(NormalToolPanel)
     bpy.utils.unregister_class(NormalToolPropsPanel)
     
+    del bpy.types.Object.kitfox_nt_brush_type
     del bpy.types.Object.kitfox_nt_strength
 
 
