@@ -312,81 +312,58 @@ class ModalDrawOperator(bpy.types.Operator):
 
 #---------------------------
 
-#class NTTargetPickerOperator(bpy.types.Operator):
-#    """Pick object with the mouse"""
-#    bl_idname = "kitfox.nt_pick_target_object"
-#    bl_label = "Normal Tool Pick Target Object Kitfox"
+class NormalPickerOperator(bpy.types.Operator):
+    """Pick normal"""
+    bl_idname = "kitfox.nt_pick_normal"
+    bl_label = " Pick Normal"
 
-##    callback : None
+    def mouse_down(self, context, event):
+        mouse_pos = (event.mouse_region_x, event.mouse_region_y)
 
-##    def setCallback(self, callback):
-##        self.callback = callback
+        ctx = bpy.context
 
-#    def mouse_down(self, context, event):
-#        mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+        region = context.region
+        rv3d = context.region_data
 
-#        ctx = bpy.context
-
-#        region = context.region
-#        rv3d = context.region_data
-#    #    coord = event.mouse_region_x, event.mouse_region_y
-
-##        viewport_center = (region.x + region.width / 2, region.y + region.height / 2)
-#        view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
-#        ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
+        view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
+        ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
 
 
-#        viewlayer = bpy.context.view_layer
-#        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
-#        
-#        if result:
-#            print("--picked " + object.name)
-##            bpy.types.Object["kitfox_nt_target.set"] = object.name
-#            bpy.ops.kitfox.normal_tool["prop_target"] = object.name
-#            
-##            bpy.types.Object.kitfox_nt_target.set(object.name)
-##            props = layout.operator(ModalDrawOperator.bl_idname)
-##            props.prop_target = obj.kitfox_nt_target
-##            callback(object.name)
+        viewlayer = bpy.context.view_layer
+        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+        
+        if result:
+            print("--picked " + str(normal))
+            context.scene.my_tool.normal = normal
 
-##        if bpy.context.mode == 'OBJECT':
-##            if result and not object.select_get():
-##                bpy.ops.view3d.select('INVOKE_DEFAULT', extend=True, deselect=False, enumerate=False, toggle=False)
-##        else:
-##            bpy.ops.view3d.select('INVOKE_DEFAULT', extend=True, deselect=False, enumerate=False, toggle=False)
-##                
-##        center = None
-##        center_count = 0
 
-#    def modal(self, context, event):
-##        context.area.tag_redraw()
+    def modal(self, context, event):
+        if event.type == 'LEFTMOUSE':
+            self.mouse_down(context, event)
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            return {'FINISHED'}
 
-#        if event.type == 'LEFTMOUSE':
-#            self.mouse_down(context, event)
-#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-#            return {'FINISHED'}
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            print("pick target object cancelled")
+            return {'CANCELLED'}
+        else:
+            return {'PASS_THROUGH'}
 
-#        elif event.type in {'RIGHTMOUSE', 'ESC'}:
-#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-#            print("pick target object cancelled")
-#            return {'CANCELLED'}
-#        else:
-#            return {'PASS_THROUGH'}
+    def invoke(self, context, event):
+        if context.area.type == 'VIEW_3D':
+            args = (self, context)
+            
+            # Add the region OpenGL drawing callback
+            # draw in view space with 'POST_VIEW' and 'PRE_VIEW'
+            self._context = context
+            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
-#    def invoke(self, context, event):
-#        if context.area.type == 'VIEW_3D':
-#            # the arguments we pass the the callback
-#            args = (self, context)
-#            # Add the region OpenGL drawing callback
-#            # draw in view space with 'POST_VIEW' and 'PRE_VIEW'
-#            self._context = context
-#            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
-
-#            context.window_manager.modal_handler_add(self)
-#            return {'RUNNING_MODAL'}
-#        else:
-#            self.report({'WARNING'}, "View3D not found, cannot run operator")
-#            return {'CANCELLED'}
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
+        else:
+            self.report({'WARNING'}, "View3D not found, cannot run operator")
+            return {'CANCELLED'}
 
 #---------------------------
 
@@ -431,6 +408,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col.prop(settings, "strength")
         col.prop(settings, "brush_type")
         col.prop(settings, "normal")
+        col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
         col.prop(settings, "target")
         
 
@@ -438,7 +416,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
 def register():
 
     bpy.utils.register_class(NormalToolSettings)
-#    bpy.utils.register_class(NTTargetPickerOperator)
+    bpy.utils.register_class(NormalPickerOperator)
     bpy.utils.register_class(ModalDrawOperator)
     bpy.utils.register_class(NormalToolPanel)
     bpy.utils.register_class(NormalToolPropsPanel)
@@ -448,7 +426,7 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(NormalToolSettings)
-#    bpy.utils.unregister_class(NTTargetPickerOperator)
+    bpy.utils.unregister_class(NormalPickerOperator)
     bpy.utils.unregister_class(ModalDrawOperator)
     bpy.utils.unregister_class(NormalToolPanel)
     bpy.utils.unregister_class(NormalToolPropsPanel)
