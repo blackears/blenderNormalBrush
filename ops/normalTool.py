@@ -10,7 +10,6 @@ from bpy_extras import view3d_utils
 
 
 class NormalToolSettings(bpy.types.PropertyGroup):
-    # use an annotation
     brush_type : bpy.props.EnumProperty(
         items=(
             ('FIXED', "Fixed", "Normals are in a fixed direction"),
@@ -30,7 +29,11 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         default = (1, 0, 0), 
         subtype="DIRECTION"
     )
-#    target : bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
+    
+    normal_exact : bpy.props.BoolProperty(
+        name="Exact normal", description="Display normal as exact coordinates", default = False
+    )
+
     target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
         
 
@@ -412,10 +415,20 @@ class NormalToolPropsPanel(bpy.types.Panel):
         row.prop(settings, "brush_type", expand = True)
 
         col = layout.column();
-        col.prop(settings, "normal")
-        col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
-        col.prop(settings, "target")
+#                    context.scene.my_tool.normal = normal
+
+        if str(context.scene.my_tool.brush_type) == "FIXED":
+            if not context.scene.my_tool.normal_exact:
+                col.prop(settings, "normal")
+            else:
+                col.prop(settings, "normal", expand = True)
+            col.prop(settings, "normal_exact")
+            col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
+        else:
+            col.prop(settings, "target")
         
+
+#---------------------------
 
 
 def register():
