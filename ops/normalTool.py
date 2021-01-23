@@ -335,6 +335,7 @@ class NormalPickerOperator(bpy.types.Operator):
         if result:
             print("--picked " + str(normal))
             context.scene.my_tool.normal = normal
+            context.area.tag_redraw()
 
 
     def modal(self, context, event):
@@ -406,7 +407,11 @@ class NormalToolPropsPanel(bpy.types.Panel):
         
         col = layout.column();
         col.prop(settings, "strength")
-        col.prop(settings, "brush_type")
+
+        row = layout.row();
+        row.prop(settings, "brush_type", expand = True)
+
+        col = layout.column();
         col.prop(settings, "normal")
         col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
         col.prop(settings, "target")
