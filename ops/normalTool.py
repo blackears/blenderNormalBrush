@@ -8,6 +8,35 @@ from gpu_extras.batch import batch_for_shader
 from bpy_extras import view3d_utils
 
 
+
+class NormalToolSettings(bpy.types.PropertyGroup):
+    # use an annotation
+    brush_type : bpy.props.EnumProperty(
+        items=(
+            ('FIXED', "Fixed", "Normals are in a fixed direction"),
+            ('ATTRACT', "Attract", "Normals point toward target object"),
+            ('REPEL', "Repel", "Normals point away from target object")
+        ),
+        default='FIXED'
+    )
+    
+    strength : bpy.props.FloatProperty(
+        name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
+    )
+
+    normal : bpy.props.FloatVectorProperty(
+        name="Normal", 
+        description="Direction of normal in Fixed mode", 
+        default = (1, 0, 0), 
+        subtype="DIRECTION"
+    )
+#    target : bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
+    target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
+        
+
+#---------------------------
+        
+
 circleSegs = 64
 circleCoords = [(math.sin(((2 * math.pi * i) / circleSegs)), math.cos((math.pi * 2 * i) / circleSegs), 0) for i in range(circleSegs + 1)]
 
@@ -157,32 +186,43 @@ def manip_normal(context, event):
     ray_target = ray_origin + view_vector
 
 
+#---------------------------
+
 class ModalDrawOperator(bpy.types.Operator):
-    """Draw a line with the mouse"""
+    """Adjust normals"""
     bl_idname = "kitfox.normal_tool"
     bl_label = "Normal Tool Kitfox"
 
 
-    prop_brush_type : bpy.props.EnumProperty(
-        items=(
-            ('FIXED', "Fixed", "Normals are in a fixed direction"),
-            ('ATTRACT', "Attract", "Normals point toward target object"),
-            ('REPEL', "Repel", "Normals point away from target object")
-        ),
-        default='FIXED'
-    )
-    
-    prop_strength : bpy.props.FloatProperty(
-        name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
-    )
+#    prop_brush_type : bpy.props.EnumProperty(
+#        items=(
+#            ('FIXED', "Fixed", "Normals are in a fixed direction"),
+#            ('ATTRACT', "Attract", "Normals point toward target object"),
+#            ('REPEL', "Repel", "Normals point away from target object")
+#        ),
+#        default='FIXED'
+#    )
+#    
+#    prop_strength : bpy.props.FloatProperty(
+#        name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
+#    )
 
-    prop_normal = bpy.props.FloatVectorProperty(name="Normal", description="Direction of normal in Fixed mode", default = (0, 1, 0))
-    prop_target = bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
-    
+#    prop_normal : bpy.props.FloatVectorProperty(name="Normal", description="Direction of normal in Fixed mode", default = (0, 1, 0))
+#    prop_target : bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
+#    
     dragging = False
 
     def mouse_down(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+        
+        print("Foobar--")
+
+#        context.scene.my_tool.target = hit_object
+        targetObj = context.scene.my_tool.target
+        if targetObj != None:
+            print("^^^Tool property target: " + targetObj.name)
+        else:
+            print("^^^Tool property target: None")
 
         ctx = bpy.context
 
@@ -219,6 +259,9 @@ class ModalDrawOperator(bpy.types.Operator):
         pass
 
     def modal(self, context, event):
+        
+        
+        
 #        self._context = context
 
 #        for obj in context.selected_objects:
@@ -267,12 +310,91 @@ class ModalDrawOperator(bpy.types.Operator):
             self.report({'WARNING'}, "View3D not found, cannot run operator")
             return {'CANCELLED'}
 
+#---------------------------
+
+#class NTTargetPickerOperator(bpy.types.Operator):
+#    """Pick object with the mouse"""
+#    bl_idname = "kitfox.nt_pick_target_object"
+#    bl_label = "Normal Tool Pick Target Object Kitfox"
+
+##    callback : None
+
+##    def setCallback(self, callback):
+##        self.callback = callback
+
+#    def mouse_down(self, context, event):
+#        mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+
+#        ctx = bpy.context
+
+#        region = context.region
+#        rv3d = context.region_data
+#    #    coord = event.mouse_region_x, event.mouse_region_y
+
+##        viewport_center = (region.x + region.width / 2, region.y + region.height / 2)
+#        view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
+#        ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
+
+
+#        viewlayer = bpy.context.view_layer
+#        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+#        
+#        if result:
+#            print("--picked " + object.name)
+##            bpy.types.Object["kitfox_nt_target.set"] = object.name
+#            bpy.ops.kitfox.normal_tool["prop_target"] = object.name
+#            
+##            bpy.types.Object.kitfox_nt_target.set(object.name)
+##            props = layout.operator(ModalDrawOperator.bl_idname)
+##            props.prop_target = obj.kitfox_nt_target
+##            callback(object.name)
+
+##        if bpy.context.mode == 'OBJECT':
+##            if result and not object.select_get():
+##                bpy.ops.view3d.select('INVOKE_DEFAULT', extend=True, deselect=False, enumerate=False, toggle=False)
+##        else:
+##            bpy.ops.view3d.select('INVOKE_DEFAULT', extend=True, deselect=False, enumerate=False, toggle=False)
+##                
+##        center = None
+##        center_count = 0
+
+#    def modal(self, context, event):
+##        context.area.tag_redraw()
+
+#        if event.type == 'LEFTMOUSE':
+#            self.mouse_down(context, event)
+#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+#            return {'FINISHED'}
+
+#        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+#            print("pick target object cancelled")
+#            return {'CANCELLED'}
+#        else:
+#            return {'PASS_THROUGH'}
+
+#    def invoke(self, context, event):
+#        if context.area.type == 'VIEW_3D':
+#            # the arguments we pass the the callback
+#            args = (self, context)
+#            # Add the region OpenGL drawing callback
+#            # draw in view space with 'POST_VIEW' and 'PRE_VIEW'
+#            self._context = context
+#            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
+
+#            context.window_manager.modal_handler_add(self)
+#            return {'RUNNING_MODAL'}
+#        else:
+#            self.report({'WARNING'}, "View3D not found, cannot run operator")
+#            return {'CANCELLED'}
+
+#---------------------------
 
 class NormalToolPanel(bpy.types.Panel):
 
     """Panel for the Normal Tool on tool shelf"""
     bl_label = "Normal Tool Panel"
-    bl_idname = "3D_VIEW_PT_normal_tool"
+    bl_idname = "OBJECT_PT_normal_tool"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
 #    bl_context = "object"
@@ -285,82 +407,54 @@ class NormalToolPanel(bpy.types.Panel):
         row = layout.row()
         row.operator("kitfox.normal_tool")
 
+#---------------------------
+
 class NormalToolPropsPanel(bpy.types.Panel):
 
     """Properties Panel for the Normal Tool on tool shelf"""
     bl_label = "Normal Tool Properties Panel"
-    bl_idname = "3D_VIEW_PT_normal_tool_props"
+    bl_idname = "OBJECT_PT_normal_tool_props"
     bl_space_type = 'VIEW_3D'
 #    bl_region_type = 'TOOL_PROPS'
     bl_region_type = 'UI'
 #    bl_context = "object"
 
+        
+
     def draw(self, context):
         layout = self.layout
 
-        obj = context.object
-
-#        row = layout.row()
-#        row.label(text="Tool Settings", icon='WORLD_DATA')
-
-#        row = layout.row()
-#        row.label(text="Active object is: " + obj.name)
-#        row = layout.row()
-#        row.prop(obj, "name")
-
-#        row = layout.row()
-#        row.label(text="walla - Tool Properties", icon='WORLD_DATA')
-
-        props = layout.operator(ModalDrawOperator.bl_idname)
-
-        row = layout.row()
-        row.prop(obj, "kitfox_nt_brush_type", expand=True)
-        props.prop_brush_type = obj.kitfox_nt_brush_type
-
-        row = layout.row()
-        row.prop(obj, "kitfox_nt_strength", expand=True)
-        props.prop_strength = obj.kitfox_nt_strength
-
-        row = layout.row()
-        row.prop(obj, "kitfox_nt_normal", expand=True)
-        props.prop_normal = obj.kitfox_nt_normal
-
-        row = layout.row()
-        row.prop(obj, "kitfox_nt_target", expand=True)
-        props.prop_target = obj.kitfox_nt_target
+        scene = context.scene
+        settings = scene.my_tool
         
-#        row = layout.row()
-#        row.operator("kitfox.normal_tool")
+        col = layout.column();
+        col.prop(settings, "strength")
+        col.prop(settings, "brush_type")
+        col.prop(settings, "normal")
+        col.prop(settings, "target")
+        
 
 
 def register():
-    bpy.types.Object.kitfox_nt_brush_type = bpy.props.EnumProperty(
-        items=(
-            ('FIXED', "Fixed", "Normals are in a fixed direction"),
-            ('ATTRACT', "Attract", "Normals point toward target object"),
-            ('REPEL', "Repel", "Normals point away from target object")
-        ),
-        default='FIXED'
-    )
-    bpy.types.Object.kitfox_nt_strength = bpy.props.FloatProperty(name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1)
-    bpy.types.Object.kitfox_nt_normal = bpy.props.FloatVectorProperty(name="Normal", description="Direction of normal in Fixed mode", default = (0, 1, 0))
-    bpy.types.Object.kitfox_nt_target = bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
-    
+
+    bpy.utils.register_class(NormalToolSettings)
+#    bpy.utils.register_class(NTTargetPickerOperator)
     bpy.utils.register_class(ModalDrawOperator)
     bpy.utils.register_class(NormalToolPanel)
     bpy.utils.register_class(NormalToolPropsPanel)
 
+    bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=NormalToolSettings)
 
 
 def unregister():
+    bpy.utils.unregister_class(NormalToolSettings)
+#    bpy.utils.unregister_class(NTTargetPickerOperator)
     bpy.utils.unregister_class(ModalDrawOperator)
     bpy.utils.unregister_class(NormalToolPanel)
     bpy.utils.unregister_class(NormalToolPropsPanel)
+
+    del bpy.types.Scene.my_tool
     
-    del bpy.types.Object.kitfox_nt_brush_type
-    del bpy.types.Object.kitfox_nt_strength
-    del bpy.types.Object.kitfox_nt_normal
-    del bpy.types.Object.kitfox_nt_target
 
 
 if __name__ == "__main__":
