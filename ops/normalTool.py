@@ -22,6 +22,14 @@ class NormalToolSettings(bpy.types.PropertyGroup):
     strength : bpy.props.FloatProperty(
         name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
     )
+    
+    normal_length : bpy.props.FloatProperty(
+        name="Normal Length", description="Display length of normal", default = 1, min=0, soft_max = 1
+    )
+
+    selected_only : bpy.props.BoolProperty(
+        name="Selected Only", description="If true, affect only selected vertices", default = True
+    )
 
     normal : bpy.props.FloatVectorProperty(
         name="Normal", 
@@ -46,9 +54,11 @@ circleCoords = [(math.sin(((2 * math.pi * i) / circleSegs)), math.cos((math.pi *
 vecZ = mathutils.Vector((0, 0, 1))
 vecX = mathutils.Vector((1, 0, 0))
 
-def calc_gizmo_transform(obj, coord, normal, ray_origin):
+#Calc matrix that maps from world space to a particular vertex on mesh
+def calc_vertex_transform(obj, coord, normal):
     pos = obj.matrix_world @ coord
 
+    #Transform normal into world space
     norm = normal.copy()
     norm.resize_4d()
     norm.w = 0
@@ -59,13 +69,7 @@ def calc_gizmo_transform(obj, coord, normal, ray_origin):
     norm.resize_3d()
     norm.normalize()
 
-    eye_offset = pos - ray_origin
-#                    eye_offset_along_view = eye_offset.project(view_vector)
-#                    print(eye_offset_along_view)
-#                    radius = eye_offset_along_view.length / 5
-    radius = eye_offset.length / 5
-    mS = mathutils.Matrix.Scale(radius, 4)
-    
+    #Find matrix that will rotate Z axis to point along normal
     axis = norm.cross(vecZ)
     if axis.length_squared < .0001:
         axis = matutils.Vector(vecX)
@@ -75,7 +79,6 @@ def calc_gizmo_transform(obj, coord, normal, ray_origin):
     
     quat = mathutils.Quaternion(axis, angle)
 #                    print (quat)
-
     mR = quat.to_matrix()
 #                    print (mR)
     mR.resize_4x4()
@@ -84,7 +87,20 @@ def calc_gizmo_transform(obj, coord, normal, ray_origin):
     mT = mathutils.Matrix.Translation(pos)
 #                    print (mT)
 
-    m = mT @ mR @ mS
+    m = mT @ mR
+    return m
+
+
+def calc_gizmo_transform(obj, coord, normal, ray_origin):
+    mV = calc_vertex_transform(obj, coord, normal)
+    
+    pos = obj.matrix_world @ coord
+    
+    eye_offset = pos - ray_origin
+    radius = eye_offset.length / 5
+    mS = mathutils.Matrix.Scale(radius, 4)
+
+    m = mV @ mS
     return m
 
 
@@ -114,6 +130,11 @@ def draw_callback(self, context):
     shader.uniform_float("color", (1, 1, 0, 1))
 
 
+    selOnly = context.scene.my_tool.selected_only
+
+    normLength = context.scene.my_tool.normal_length
+    mS = mathutils.Matrix.Scale(normLength, 4)
+
     for obj in ctx.selected_objects:
         if obj.type == 'MESH':
             success = obj.update_from_editmode()
@@ -127,55 +148,36 @@ def draw_callback(self, context):
 #bm.free()
 
             for v in mesh.vertices:
-                if v.select:
+                if not (selOnly and not v.select):
                     
-                    m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
+#                    m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
+                    m = calc_vertex_transform(obj, v.co, v.normal)
+                    m = m @ mS
 
             
                     gpu.matrix.push()
+                    
                     gpu.matrix.multiply_matrix(m)
                     shader.uniform_float("color", (1, 1, 0, 1))
                     batch.draw(shader)
                     
-                    gpu.matrix.push()
-                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'Y'))
-                    shader.uniform_float("color", (1, 0, 0, 1))
-                    batchCircle.draw(shader)
+#                    gpu.matrix.push()
+#                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'Y'))
+#                    shader.uniform_float("color", (1, 0, 0, 1))
+#                    batchCircle.draw(shader)
+#                    gpu.matrix.pop()
+#                    
+#                    gpu.matrix.push()
+#                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X'))
+#                    shader.uniform_float("color", (0, 1, 0, 1))
+#                    batchCircle.draw(shader)
+#                    gpu.matrix.pop()
+
+#                    shader.uniform_float("color", (0, 0, 1, 1))
+#                    batchCircle.draw(shader)
+#                    
                     gpu.matrix.pop()
-                    
-                    gpu.matrix.push()
-                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X'))
-                    shader.uniform_float("color", (0, 1, 0, 1))
-                    batchCircle.draw(shader)
-                    gpu.matrix.pop()
 
-                    shader.uniform_float("color", (0, 0, 1, 1))
-                    batchCircle.draw(shader)
-                    
-                    gpu.matrix.pop()
-
-
-#    print("mouse points", len(self.mouse_path))
-
-#    font_id = 0  # XXX, need to find out how best to get this.
-
-    # draw some text
-#    blf.position(font_id, 15, 30, 0)
-#    blf.size(font_id, 20, 72)
-#    blf.draw(font_id, "Hello Word " + str(len(self.mouse_path)))
-
-    # 50% alpha, 2 pixel width line
-#    shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
-#    bgl.glEnable(bgl.GL_BLEND)
-#    bgl.glLineWidth(2)
-#    batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": self.mouse_path})
-#    shader.bind()
-#    shader.uniform_float("color", (0.0, 0.0, 0.0, 0.5))
-#    batch.draw(shader)
-
-    # restore opengl defaults
-#    bgl.glLineWidth(1)
-#    bgl.glDisable(bgl.GL_BLEND)
 
 def manip_normal(context, event):
     region = context.region
@@ -410,6 +412,8 @@ class NormalToolPropsPanel(bpy.types.Panel):
         
         col = layout.column();
         col.prop(settings, "strength")
+        col.prop(settings, "normal_length")
+        col.prop(settings, "selected_only")
 
         row = layout.row();
         row.prop(settings, "brush_type", expand = True)
