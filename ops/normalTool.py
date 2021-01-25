@@ -49,27 +49,18 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         
 
 circleSegs = 64
-circleCoords = [(math.sin(((2 * math.pi * i) / circleSegs)), math.cos((math.pi * 2 * i) / circleSegs), 0) for i in range(circleSegs + 1)]
+coordsCircle = [(math.sin(((2 * math.pi * i) / circleSegs)), math.cos((math.pi * 2 * i) / circleSegs), 0) for i in range(circleSegs + 1)]
+
+coordsNormal = [(0, 0, 0), (0, 0, 1)]
 
 vecZ = mathutils.Vector((0, 0, 1))
 vecX = mathutils.Vector((1, 0, 0))
 
-#Calc matrix that maps from world space to a particular vertex on mesh
-def calc_vertex_transform(obj, coord, normal):
-    pos = obj.matrix_world @ coord
 
-    #Transform normal into world space
-    norm = normal.copy()
-    norm.resize_4d()
-    norm.w = 0
-    mIT = obj.matrix_world.copy()
-    mIT.invert()
-    mIT.transpose()
-    norm = mIT @ norm
-    norm.resize_3d()
-    norm.normalize()
-
-    #Find matrix that will rotate Z axis to point along normal
+#Find matrix that will rotate Z axis to point along normal
+#coord - point in world space
+#normal - normal in world space
+def calc_vertex_transform_world(pos, norm):
     axis = norm.cross(vecZ)
     if axis.length_squared < .0001:
         axis = matutils.Vector(vecX)
@@ -89,6 +80,25 @@ def calc_vertex_transform(obj, coord, normal):
 
     m = mT @ mR
     return m
+
+#Calc matrix that maps from world space to a particular vertex on mesh
+#coord - vertex position in local space
+#normal - vertex normal in local space
+def calc_vertex_transform(obj, coord, normal):
+    pos = obj.matrix_world @ coord
+
+    #Transform normal into world space
+    norm = normal.copy()
+    norm.resize_4d()
+    norm.w = 0
+    mIT = obj.matrix_world.copy()
+    mIT.invert()
+    mIT.transpose()
+    norm = mIT @ norm
+    norm.resize_3d()
+    norm.normalize()
+
+    return calc_vertex_transform_world(pos, norm)
 
 
 def calc_gizmo_transform(obj, coord, normal, ray_origin):
@@ -121,12 +131,31 @@ def draw_callback(self, context):
 #    ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
 
 
-    coords = [(0, 0, 0), (0, 0, 1)]
     shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-    batch = batch_for_shader(shader, 'LINES', {"pos": coords})
-    batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": circleCoords})
+    batch = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
+    batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
 
     shader.bind();
+    
+    #Draw cursor
+    if self.show_cursor:
+#        m = calc_vertex_transform(self.cursor_object, self.cursor_pos, self.cursor_normal);
+#        m = self.cursor_matrix
+        m = calc_vertex_transform_world(self.cursor_pos, self.cursor_normal);
+
+        gpu.matrix.push()
+        
+        gpu.matrix.multiply_matrix(m)
+        shader.uniform_float("color", (1, 0, 1, 1))
+        batch.draw(shader)
+
+        shader.uniform_float("color", (1, 0, 1, 1))
+        batchCircle.draw(shader)
+        
+        gpu.matrix.pop()
+
+    
+    #Draw editable normals
     shader.uniform_float("color", (1, 1, 0, 1))
 
 
@@ -216,18 +245,67 @@ class ModalDrawOperator(bpy.types.Operator):
 #    prop_target : bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
 #    
     dragging = False
+    
+    cursor_pos = None
+    show_cursor = False
+
+    def mouse_move(self, context, event):
+        mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+
+        ctx = bpy.context
+
+        region = context.region
+        rv3d = context.region_data
+
+        view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
+        ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
+
+        viewlayer = bpy.context.view_layer
+        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+        
+        
+        if result:
+            self.show_cursor = True
+            self.cursor_pos = location
+            self.cursor_normal = normal
+            self.cursor_object = object
+            self.cursor_matrix = matrix
+            
+#            print ("Mouse over " + object.name)
+#            shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+#            
+#            batch = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
+#            batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
+#                    
+#            shader.bind()
+
+#            m = calc_vertex_transform(object, location, normal);
+
+#            gpu.matrix.push()
+#            
+#            gpu.matrix.multiply_matrix(m)
+#            shader.uniform_float("color", (1, 0, 1, 1))
+#            batch.draw(shader)
+
+#            shader.uniform_float("color", (1, 0, 1, 1))
+#            batchCircle.draw(shader)
+#            
+#            gpu.matrix.pop()
+        else:
+            self.show_cursor = False
+
 
     def mouse_down(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         
-        print("Foobar--")
+#        print("Foobar--")
 
 #        context.scene.my_tool.target = hit_object
         targetObj = context.scene.my_tool.target
-        if targetObj != None:
-            print("^^^Tool property target: " + targetObj.name)
-        else:
-            print("^^^Tool property target: None")
+#        if targetObj != None:
+#            print("^^^Tool property target: " + targetObj.name)
+#        else:
+#            print("^^^Tool property target: None")
 
         ctx = bpy.context
 
@@ -281,14 +359,10 @@ class ModalDrawOperator(bpy.types.Operator):
             return {'PASS_THROUGH'}
 
         elif event.type == 'MOUSEMOVE':
-#            self.mouse_path.append((event.mouse_region_x, event.mouse_region_y))
-            pass
+            self.mouse_move(context, event)
+            
         elif event.type == 'LEFTMOUSE':
-#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-#            return {'FINISHED'}
             self.mouse_down(context, event)
-#            manip_normal(context, event)
-            pass
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
