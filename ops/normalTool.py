@@ -249,6 +249,8 @@ class ModalDrawOperator(bpy.types.Operator):
     
     cursor_pos = None
     show_cursor = False
+    
+    bm = None
 
     def mouse_move(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
@@ -306,40 +308,69 @@ class ModalDrawOperator(bpy.types.Operator):
         selOnly = context.scene.my_tool.selected_only
         brush_normal = context.scene.my_tool.normal
 
-        for obj in ctx.selected_objects:
-            if obj.type == 'MESH':
-#                print("Updating mesh " + obj.name)
+
+
+
+
+        me = context.edit_object.data
+        me.use_auto_smooth = True
+        
+        self.bm = bmesh.from_edit_mesh(me)
+
+#        print("updating faces")
+        for face in self.bm.faces:
+            for loop in face.loops:
+#                print("-face norm " + str(loop.vert.normal))
+                loop.vert.normal = brush_normal
+#                loop.vert.co[0] = loop.vert.co[0] + .1
 #                
+        me = context.edit_object.data
+        bmesh.update_edit_mesh(me, False, False)
+
+
+
+
+
+#        for obj in ctx.selected_objects:
+#            if obj.type == 'MESH':
+#                print("Updating mesh " + obj.name)
+                
+#                me = obj.data
 #                bm = bmesh.new()
 #                bm.from_mesh(mesh)
-#                
-#                for face in bm.faces:
+#                bm = bmesh.from_edit_mesh(me)
+                
+#                for face in self.bm.faces:
 #                    for loop in face.loops:
 ##                        loop.vert
-#                        loop.normal = brush_normal
+#                        loop.vert.normal = brush_normal
+#                        
+#                me = context.edit_object.data
+#                bmesh.update_edit_mesh(me, False, False)
 #                
 #                bm.to_mesh(mesh)
 #                bm.free()
-#                
+                
 #                success = obj.update_from_editmode()
+#                print ("Update from editr mode success: " + success)
 
 
                 
                 #---
                 #This works, but only in object mode
-                success = obj.update_from_editmode()
-                
-                mesh = obj.data
-                mesh.use_auto_smooth = True
-                
-                mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
-                
-                normals = []
-                for v in mesh.vertices:
-                    normals.append(brush_normal)
-
-                mesh.normals_split_custom_set_from_vertices(normals)
 #                success = obj.update_from_editmode()
+#                
+#                mesh = obj.data
+#                mesh.use_auto_smooth = True
+#                
+#                mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
+#                
+#                normals = []
+#                for v in mesh.vertices:
+#                    normals.append(brush_normal)
+
+#                mesh.normals_split_custom_set_from_vertices(normals)
+##                success = obj.update_from_editmode()
                 
                 
                 #----
@@ -364,7 +395,8 @@ class ModalDrawOperator(bpy.types.Operator):
     def modal(self, context, event):
         
         
-        
+            
+    
 #        self._context = context
 
 #        for obj in context.selected_objects:
