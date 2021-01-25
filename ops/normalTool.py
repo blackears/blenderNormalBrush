@@ -1,4 +1,5 @@
 import bpy
+import bmesh
 import bgl
 import blf
 import gpu
@@ -270,27 +271,6 @@ class ModalDrawOperator(bpy.types.Operator):
             self.cursor_normal = normal
             self.cursor_object = object
             self.cursor_matrix = matrix
-            
-#            print ("Mouse over " + object.name)
-#            shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-#            
-#            batch = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
-#            batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
-#                    
-#            shader.bind()
-
-#            m = calc_vertex_transform(object, location, normal);
-
-#            gpu.matrix.push()
-#            
-#            gpu.matrix.multiply_matrix(m)
-#            shader.uniform_float("color", (1, 0, 1, 1))
-#            batch.draw(shader)
-
-#            shader.uniform_float("color", (1, 0, 1, 1))
-#            batchCircle.draw(shader)
-#            
-#            gpu.matrix.pop()
         else:
             self.show_cursor = False
 
@@ -316,25 +296,65 @@ class ModalDrawOperator(bpy.types.Operator):
 #        viewport_center = (region.x + region.width / 2, region.y + region.height / 2)
         view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
         ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
+
+        viewlayer = bpy.context.view_layer
+        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
         
         center = None
         center_count = 0
 
+        selOnly = context.scene.my_tool.selected_only
+        brush_normal = context.scene.my_tool.normal
+
         for obj in ctx.selected_objects:
             if obj.type == 'MESH':
+#                print("Updating mesh " + obj.name)
+#                
+#                bm = bmesh.new()
+#                bm.from_mesh(mesh)
+#                
+#                for face in bm.faces:
+#                    for loop in face.loops:
+##                        loop.vert
+#                        loop.normal = brush_normal
+#                
+#                bm.to_mesh(mesh)
+#                bm.free()
+#                
+#                success = obj.update_from_editmode()
+
+
+                
+                #---
+                #This works, but only in object mode
                 success = obj.update_from_editmode()
+                
                 mesh = obj.data
                 mesh.use_auto_smooth = True
                 
+                mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
+                
+                normals = []
                 for v in mesh.vertices:
-                    if v.select:
-                        if center_count == 0:
-                            center = v.co
-                        else:
-                            center += v.co
-                        center_count += 1
-                        
-                        m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
+                    normals.append(brush_normal)
+
+                mesh.normals_split_custom_set_from_vertices(normals)
+#                success = obj.update_from_editmode()
+                
+                
+                #----
+
+
+                
+#                for v in mesh.vertices:
+#                    if not (selOnly and not v.select):
+#                        if center_count == 0:
+#                            center = v.co
+#                        else:
+#                            center += v.co
+#                        center_count += 1
+#                        
+#                        m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
 
 
         self.drag_start_pos = mouse_pos
