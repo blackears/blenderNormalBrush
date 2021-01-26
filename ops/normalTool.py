@@ -20,6 +20,10 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         default='FIXED'
     )
     
+    radius : bpy.props.FloatProperty(
+        name="Radius", description="Radius of brush", default = 1, min=0, soft_max = 4
+    )
+    
     strength : bpy.props.FloatProperty(
         name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
     )
@@ -282,6 +286,12 @@ class ModalDrawOperator(bpy.types.Operator):
 
 
     def mouse_down(self, context, event):
+        if event.value == "PRESS":
+            self.dragging = True
+        elif event.value == "RELEASE":
+            self.dragging = False
+            return;
+            
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         
 #        print("Foobar--")
@@ -311,25 +321,57 @@ class ModalDrawOperator(bpy.types.Operator):
 
         selOnly = context.scene.my_tool.selected_only
         brush_normal = context.scene.my_tool.normal
+        radius = context.scene.my_tool.radius
+        strength = context.scene.my_tool.strength
 
+        if result:
 
         #---
         #This works, but only in object mode
 #        success = obj.update_from_editmode()
         
-        for obj in ctx.selected_objects:
-            if obj.type == 'MESH':
-#                print("Updating mesh " + obj.name)
-                mesh = obj.data
-                mesh.use_auto_smooth = True
-                
-                mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
-                
-                normals = []
-                for v in mesh.vertices:
-                    normals.append(brush_normal)
+            for obj in ctx.selected_objects:
+                if obj.type == 'MESH':
+    #                print("Updating mesh " + obj.name)
+                    mesh = obj.data
+                    mesh.use_auto_smooth = True
+                    
+                    mesh.calc_normals_split()
+                    
+                    normals = []
+                    for l in mesh.loops:
+#                        normals.append(brush_normal)
+                        
+                        v = mesh.vertices[l.vertex_index]
+                        pos = mathutils.Vector(v.co)
+                        wpos = obj.matrix_world @ pos
+                        
+                        offset = location - wpos
+#                        offset.length_squared / radius * radius
+                        t = 1 - offset.length / radius
+                        
+                        if t <= 0:
+                            normals.append((0, 0, 0))
+                        else:
+                            axis = l.normal.cross(brush_normal)
+                            angle = brush_normal.angle(l.normal)
+                            q = mathutils.Quaternion(axis, angle * t * strength)
+                            m = q.to_matrix()
+                            
+                            newNorm = m @ l.normal
+                            
+                            normals.append(newNorm)
+                    
+                    mesh.normals_split_custom_set(normals)
+                    
+                    
+#                    mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
+#                    
+#                    normals = []
+#                    for v in mesh.vertices:
+#                        normals.append(brush_normal)
 
-                mesh.normals_split_custom_set_from_vertices(normals)
+#                    mesh.normals_split_custom_set_from_vertices(normals)
 
 
 
@@ -418,9 +460,11 @@ class ModalDrawOperator(bpy.types.Operator):
 
         elif event.type == 'MOUSEMOVE':
             self.mouse_move(context, event)
+            return {'RUNNING_MODAL'}
             
         elif event.type == 'LEFTMOUSE':
             self.mouse_down(context, event)
+            return {'RUNNING_MODAL'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
