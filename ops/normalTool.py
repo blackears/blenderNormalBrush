@@ -64,7 +64,7 @@ vecX = mathutils.Vector((1, 0, 0))
 def calc_vertex_transform_world(pos, norm):
     axis = norm.cross(vecZ)
     if axis.length_squared < .0001:
-        axis = matutils.Vector(vecX)
+        axis = mathutils.Vector(vecX)
     else:
         axis.normalize()
     angle = -math.acos(norm.dot(vecZ))
@@ -176,12 +176,16 @@ def draw_callback(self, context):
 #            for v in bm.verts:
 #bm.to_mesh(me)
 #bm.free()
+            mesh.calc_normals_split()
+            
+            for l in mesh.loops:
 
-            for v in mesh.vertices:
+#            for v in mesh.vertices:
                 if not (selOnly and not v.select):
                     
 #                    m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
-                    m = calc_vertex_transform(obj, v.co, v.normal)
+                    v = mesh.vertices[l.vertex_index]
+                    m = calc_vertex_transform(obj, v.co, l.normal)
                     m = m @ mS
 
             
@@ -309,23 +313,40 @@ class ModalDrawOperator(bpy.types.Operator):
         brush_normal = context.scene.my_tool.normal
 
 
-
-
-
-        me = context.edit_object.data
-        me.use_auto_smooth = True
+        #---
+        #This works, but only in object mode
+#        success = obj.update_from_editmode()
         
-        self.bm = bmesh.from_edit_mesh(me)
+        for obj in ctx.selected_objects:
+            if obj.type == 'MESH':
+#                print("Updating mesh " + obj.name)
+                mesh = obj.data
+                mesh.use_auto_smooth = True
+                
+                mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
+                
+                normals = []
+                for v in mesh.vertices:
+                    normals.append(brush_normal)
 
-#        print("updating faces")
-        for face in self.bm.faces:
-            for loop in face.loops:
-#                print("-face norm " + str(loop.vert.normal))
-                loop.vert.normal = brush_normal
-#                loop.vert.co[0] = loop.vert.co[0] + .1
-#                
-        me = context.edit_object.data
-        bmesh.update_edit_mesh(me, False, False)
+                mesh.normals_split_custom_set_from_vertices(normals)
+
+
+
+#        me = context.edit_object.data
+#        me.use_auto_smooth = True
+#        
+#        self.bm = bmesh.from_edit_mesh(me)
+
+##        print("updating faces")
+#        for face in self.bm.faces:
+#            for loop in face.loops:
+##                print("-face norm " + str(loop.vert.normal))
+#                loop.vert.normal = brush_normal
+##                loop.vert.co[0] = loop.vert.co[0] + .1
+##                
+#        me = context.edit_object.data
+#        bmesh.update_edit_mesh(me, False, False)
 
 
 
@@ -356,21 +377,6 @@ class ModalDrawOperator(bpy.types.Operator):
 
 
                 
-                #---
-                #This works, but only in object mode
-#                success = obj.update_from_editmode()
-#                
-#                mesh = obj.data
-#                mesh.use_auto_smooth = True
-#                
-#                mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
-#                
-#                normals = []
-#                for v in mesh.vertices:
-#                    normals.append(brush_normal)
-
-#                mesh.normals_split_custom_set_from_vertices(normals)
-##                success = obj.update_from_editmode()
                 
                 
                 #----
@@ -527,6 +533,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
 #    bl_region_type = 'TOOL_PROPS'
     bl_region_type = 'UI'
 #    bl_context = "object"
+    bl_category = "Kitfox"
 
         
 
@@ -549,7 +556,8 @@ class NormalToolPropsPanel(bpy.types.Panel):
 
         if str(context.scene.my_tool.brush_type) == "FIXED":
             if not context.scene.my_tool.normal_exact:
-                col.prop(settings, "normal")
+                col.label(text="Normal:")
+                col.prop(settings, "normal", text="")
             else:
                 col.prop(settings, "normal", expand = True)
             col.prop(settings, "normal_exact")
