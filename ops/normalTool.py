@@ -73,6 +73,11 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         name="Exact normal", description="Display normal as exact coordinates", default = True
     )
 
+    
+    front_faces_only : bpy.props.BoolProperty(
+        name="Front Faces Only", description="Only affect normals on front facing faces", default = True
+    )
+
     target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
     
         
@@ -287,11 +292,12 @@ class ModalDrawOperator(bpy.types.Operator):
         brush_type = context.scene.my_tool.brush_type
         brush_normal = context.scene.my_tool.normal
         target = context.scene.my_tool.target
+        front_faces_only = context.scene.my_tool.front_faces_only
         
 
-        if target != None:        
-            print ("Target " + target.name)
-        brush_normal.normalize()
+#        if target != None:        
+#            print ("Target " + target.name)
+#        brush_normal.normalize()
 #        print("brush_normal " + str(brush_normal))
 
         if result:
@@ -310,86 +316,92 @@ class ModalDrawOperator(bpy.types.Operator):
                     
 #                    print("num mesh loops: " + str(len(mesh.loops))
                     normals = []
-                    for l in mesh.loops:
-#                        normals.append(brush_normal)
-                        
-                        v = mesh.vertices[l.vertex_index]
-                        pos = mathutils.Vector(v.co)
-                        wpos = obj.matrix_world @ pos
-
-#                        print ("---")
-#                        print ("mtx wrld " + str(obj.matrix_world))
-#                        print ("pos " + str(pos))
-#                        print ("wpos " + str(wpos))
-
-                        #Normal transform is (l2w ^ -1) ^ -1 ^ T
-                        w2ln = obj.matrix_world.copy()
-                        w2ln.transpose()
-                        
-                        nLocal = None
-                        if brush_type == "FIXED":
-                            nLocal = brush_normal.to_4d()
-                            nLocal.w = 0
-                            nLocal = w2ln @ nLocal
-                            nLocal = nLocal.to_3d()
-                            nLocal.normalize()
-                        elif brush_type == "ATTRACT":
-                            if target != None:
-                                m = obj.matrix_world.copy()
-                                m.invert()
-                                targetLoc = m @ target.matrix_world.translation
-                                locationLoc = m @ location
-                                
-                                nLocal = targetLoc - pos
-                                nLocal.normalize()
-                        elif brush_type == "REPEL":
-                            if target != None:
-                                m = obj.matrix_world.copy()
-                                m.invert()
-                                targetLoc = m @ target.matrix_world.translation
-                                locationLoc = m @ location
-                                
-                                nLocal = pos - targetLoc
-                                nLocal.normalize()
-                                
-#                                print("Setting nLocal")
-                            
-#                                nLocal = mathutils.Vector(v.normal)
-                        elif brush_type == "VERTEX":
-                            nLocal = mathutils.Vector(v.normal)
-#                        print("brush norm local " + str(nLocal))
-                        
-#                        print("l2w " + str(obj.matrix_world))
-#                        print("w2ln " + str(w2ln))
-                        
-#                        print("nLocal " + str(nLocal))                        
-                        
-                        
-                        offset = location - wpos
-#                        print ("offset " + str(offset))
-                        
-#                        offset.length_squared / radius * radius
-                        t = 1 - offset.length / radius
-#                        print ("t " + str(t))
-                        
-#                        print("loop norm " + str(l.normal))
-                        if t <= 0 or nLocal == None:
-                            normals.append(l.normal)
-                        else:
-                            axis = l.normal.cross(nLocal)
-                            angle = nLocal.angle(l.normal)
-                            
-#                            print("->axis " + str(axis))
-#                            print("->angle " + str(math.degrees(angle)))
-                            
-                            q = mathutils.Quaternion(axis, angle * t * strength)
-                            m = q.to_matrix()
-                            
-                            newNorm = m @ l.normal
-#                            print("->new norm " + str(newNorm))
-                            
-                            normals.append(newNorm)
                     
+                    for p in mesh.polygons:
+                        for loop_idx in p.loop_indices:
+                            l = mesh.loops[loop_idx]
+    #                        normals.append(brush_normal)
+                            
+                            v = mesh.vertices[l.vertex_index]
+                            pos = mathutils.Vector(v.co)
+                            wpos = obj.matrix_world @ pos
+
+    #                        print ("---")
+    #                        print ("mtx wrld " + str(obj.matrix_world))
+    #                        print ("pos " + str(pos))
+    #                        print ("wpos " + str(wpos))
+
+                            #Normal transform is (l2w ^ -1) ^ -1 ^ T
+                            w2ln = obj.matrix_world.copy()
+                            w2ln.transpose()
+                            
+                            nLocal = None
+                            if brush_type == "FIXED":
+                                nLocal = brush_normal.to_4d()
+                                nLocal.w = 0
+                                nLocal = w2ln @ nLocal
+                                nLocal = nLocal.to_3d()
+                                nLocal.normalize()
+                            elif brush_type == "ATTRACT":
+                                if target != None:
+                                    m = obj.matrix_world.copy()
+                                    m.invert()
+                                    targetLoc = m @ target.matrix_world.translation
+                                    
+                                    nLocal = targetLoc - pos
+                                    nLocal.normalize()
+                            elif brush_type == "REPEL":
+                                if target != None:
+                                    m = obj.matrix_world.copy()
+                                    m.invert()
+                                    targetLoc = m @ target.matrix_world.translation
+                                    
+                                    nLocal = pos - targetLoc
+                                    nLocal.normalize()
+                                    
+    #                                print("Setting nLocal")
+                                
+    #                                nLocal = mathutils.Vector(v.normal)
+                            elif brush_type == "VERTEX":
+                                nLocal = mathutils.Vector(v.normal)
+    #                        print("brush norm local " + str(nLocal))
+                            
+    #                        print("l2w " + str(obj.matrix_world))
+    #                        print("w2ln " + str(w2ln))
+                            
+    #                        print("nLocal " + str(nLocal))                        
+                            
+                            
+                            offset = location - wpos
+    #                        print ("offset " + str(offset))
+                            
+    #                        offset.length_squared / radius * radius
+                            t = 1 - offset.length / radius
+    #                        print ("t " + str(t))
+    
+                            view_local = w2ln @ view_vector
+#                            if p.normal.dot(view_local) < 0 && front_faces_only:
+#                                pass
+                            
+                            
+    #                        print("loop norm " + str(l.normal))
+                            if t <= 0 or nLocal == None or (p.normal.dot(view_local) > 0 and front_faces_only):
+                                normals.append(l.normal)
+                            else:
+                                axis = l.normal.cross(nLocal)
+                                angle = nLocal.angle(l.normal)
+                                
+    #                            print("->axis " + str(axis))
+    #                            print("->angle " + str(math.degrees(angle)))
+                                
+                                q = mathutils.Quaternion(axis, angle * t * strength)
+                                m = q.to_matrix()
+                                
+                                newNorm = m @ l.normal
+    #                            print("->new norm " + str(newNorm))
+                                
+                                normals.append(newNorm)
+                        
                     mesh.normals_split_custom_set(normals)
 
 
@@ -610,6 +622,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col.prop(settings, "strength")
         col.prop(settings, "normal_length")
         col.prop(settings, "radius")
+        col.prop(settings, "front_faces_only")
 #        col.prop(settings, "selected_only")
 
         row = layout.row();
