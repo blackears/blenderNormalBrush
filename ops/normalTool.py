@@ -8,6 +8,30 @@ import math
 from gpu_extras.batch import batch_for_shader
 from bpy_extras import view3d_utils
 
+#def normal_update(self, context):
+#    #Set a flag when the normal is changed to get around not receiving a 
+#    # mouse up event when interacting with the panel
+#    print ("Callback")
+
+#    #I really hate python    
+#    tool = context.scene.my_tool
+#    
+#    ox = tool.old_normal.x
+#    oy = tool.old_normal.y
+#    oz = tool.old_normal.z
+#    nx = tool.normal.x
+#    ny = tool.normal.y
+#    nz = tool.normal.z
+#    
+#    if ox != nx and oy != ny and oz != nz:
+#        print ("Callback - CHANGED!")
+#        print ("old norm " + str(tool.old_normal))
+#        print ("norm " + str(tool.normal))
+
+##        print ("old norm x:" + str(tool.old_normal.x))
+
+#        tool.normal_changed = True
+#        tool.old_normal = (nx, ny, nz)
 
 
 class NormalToolSettings(bpy.types.PropertyGroup):
@@ -15,7 +39,8 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         items=(
             ('FIXED', "Fixed", "Normals are in a fixed direction"),
             ('ATTRACT', "Attract", "Normals point toward target object"),
-            ('REPEL', "Repel", "Normals point away from target object")
+            ('REPEL', "Repel", "Normals point away from target object"),
+            ('VERTEX', "Vertex", "Get normal values from mesh vertices")
         ),
         default='FIXED'
     )
@@ -41,6 +66,7 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         description="Direction of normal in Fixed mode", 
         default = (1, 0, 0), 
         subtype="DIRECTION"
+#        update=normal_update
     )
     
     normal_exact : bpy.props.BoolProperty(
@@ -48,7 +74,12 @@ class NormalToolSettings(bpy.types.PropertyGroup):
     )
 
     target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
+    
         
+#    normal_changed = False
+#    normal_changed : bpy.props.BoolProperty(default=False)
+#    old_normal : bpy.props.FloatVectorProperty(subtype="DIRECTION")
+#        
 
 #---------------------------
         
@@ -131,12 +162,12 @@ def draw_callback(self, context):
 
 
     shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-    batch = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
+    batchLine = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
     batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
 
     shader.bind();
 
-
+    bgl.glEnable(bgl.GL_DEPTH_TEST)
     
     #Draw cursor
     if self.show_cursor:
@@ -150,8 +181,8 @@ def draw_callback(self, context):
         gpu.matrix.push()
         
         gpu.matrix.multiply_matrix(m)
-        shader.uniform_float("color", (1, 0, 1, 1))
-        batch.draw(shader)
+#        shader.uniform_float("color", (1, 0, 1, 1))
+#        batchLine.draw(shader)
 
         shader.uniform_float("color", (1, 0, 1, 1))
         batchCircle.draw(shader)
@@ -167,7 +198,7 @@ def draw_callback(self, context):
         gpu.matrix.multiply_matrix(m)
 
         shader.uniform_float("color", (0, 1, 1, 1))
-        batch.draw(shader)
+        batchLine.draw(shader)
         
         gpu.matrix.pop()
 
@@ -202,10 +233,11 @@ def draw_callback(self, context):
                     
                     gpu.matrix.multiply_matrix(m)
                     shader.uniform_float("color", (1, 1, 0, 1))
-                    batch.draw(shader)
+                    batchLine.draw(shader)
                     
                     gpu.matrix.pop()
 
+    bgl.glDisable(bgl.GL_DEPTH_TEST)
 
 
 
@@ -250,9 +282,10 @@ class ModalDrawOperator(bpy.types.Operator):
         center_count = 0
 
         selOnly = context.scene.my_tool.selected_only
-        brush_normal = context.scene.my_tool.normal
         radius = context.scene.my_tool.radius
         strength = context.scene.my_tool.strength
+        brush_type = context.scene.my_tool.brush_type
+        brush_normal = context.scene.my_tool.normal
         
         brush_normal.normalize()
 #        print("brush_normal " + str(brush_normal))
@@ -289,11 +322,16 @@ class ModalDrawOperator(bpy.types.Operator):
                         w2ln = obj.matrix_world.copy()
                         w2ln.transpose()
                         
-                        nLocal = brush_normal.to_4d()
-                        nLocal.w = 0
-                        nLocal = w2ln @ nLocal
-                        nLocal = nLocal.to_3d()
-                        nLocal.normalize()
+                        nLocal = None
+                        if brush_type == "FIXED":
+                            nLocal = brush_normal.to_4d()
+                            nLocal.w = 0
+                            nLocal = w2ln @ nLocal
+                            nLocal = nLocal.to_3d()
+                            nLocal.normalize()
+                        elif brush_type == "VERTEX":
+                            nLocal = mathutils.Vector(v.normal)
+                            pass
 #                        print("brush norm local " + str(nLocal))
                         
 #                        print("l2w " + str(obj.matrix_world))
@@ -352,22 +390,33 @@ class ModalDrawOperator(bpy.types.Operator):
             self.cursor_matrix = matrix
         else:
             self.show_cursor = False
-            
+
+#        print ("dragging: " + str(self.dragging));            
         if self.dragging:
             self.dab_brush(context, event)
 
 
     def mouse_down(self, context, event):
         if event.value == "PRESS":
+#            print ("m DOWN")
             self.dragging = True
             self.dab_brush(context, event)
         elif event.value == "RELEASE":
+#            print ("m UP")
             self.dragging = False
             return;
 
 
     def modal(self, context, event):
-            
+
+        #We are not receiving a mouse up event after editing the normal,
+        # so check for it here
+#        print ("modal normal_changed: " + str(context.scene.my_tool.normal_changed))   
+#        if context.scene.my_tool.normal_changed:
+#            print ("reactng to normal chagne!!!: ")   
+#            self.dragging = False
+#            context.scene.my_tool.normal_changed = False;
+#            
         context.area.tag_redraw()
 
         if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
@@ -376,12 +425,22 @@ class ModalDrawOperator(bpy.types.Operator):
 
         elif event.type == 'MOUSEMOVE':
             self.mouse_move(context, event)
-            return {'RUNNING_MODAL'}
+            
+            if self.dragging:
+                return {'RUNNING_MODAL'}
+            else:
+                return {'PASS_THROUGH'}
             
         elif event.type == 'LEFTMOUSE':
             self.mouse_down(context, event)
-            return {'RUNNING_MODAL'}
+            return {'PASS_THROUGH'}
+#            return {'RUNNING_MODAL'}
 
+        elif event.type in {'Z'}:
+            #Kludge to get around FloatVectorProperty(subtype='DIRECTION') error
+            self.dragging = False
+            return {'RUNNING_MODAL'}
+        
         elif event.type in {'RET'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             return {'FINISHED'}
