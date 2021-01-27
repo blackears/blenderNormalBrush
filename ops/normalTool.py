@@ -371,14 +371,14 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.type in {'RET'}:
             return {'FINISHED'}
 
-        elif event.type in {'PAGE_UP'}:
+        elif event.type in {'PAGE_UP', 'RIGHT_BRACKET'}:
             if event.value == "PRESS":
                 brush_radius = context.scene.my_tool.radius
                 brush_radius = brush_radius + .1
                 context.scene.my_tool.radius = brush_radius
             return {'RUNNING_MODAL'}
 
-        elif event.type in {'PAGE_DOWN'}:
+        elif event.type in {'PAGE_DOWN', 'LEFT_BRACKET'}:
             if event.value == "PRESS":
                 brush_radius = context.scene.my_tool.radius
                 brush_radius = max(brush_radius - .1, .1)
