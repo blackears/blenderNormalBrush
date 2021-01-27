@@ -136,14 +136,17 @@ def draw_callback(self, context):
 
     shader.bind();
 
-    brush_radius = context.scene.my_tool.radius
+
     
     #Draw cursor
     if self.show_cursor:
+        brush_radius = context.scene.my_tool.radius
+    
         m = calc_vertex_transform_world(self.cursor_pos, self.cursor_normal);
         mS = mathutils.Matrix.Scale(brush_radius, 4)
         m = m @ mS
-
+    
+        #Tangent to mesh
         gpu.matrix.push()
         
         gpu.matrix.multiply_matrix(m)
@@ -152,6 +155,19 @@ def draw_callback(self, context):
 
         shader.uniform_float("color", (1, 0, 1, 1))
         batchCircle.draw(shader)
+        
+        gpu.matrix.pop()
+
+
+        #Brush normal direction
+        gpu.matrix.push()
+        
+        brush_normal = context.scene.my_tool.normal
+        m = calc_vertex_transform_world(self.cursor_pos, brush_normal);
+        gpu.matrix.multiply_matrix(m)
+
+        shader.uniform_float("color", (0, 1, 1, 1))
+        batch.draw(shader)
         
         gpu.matrix.pop()
 
@@ -191,16 +207,6 @@ def draw_callback(self, context):
                     gpu.matrix.pop()
 
 
-def manip_normal(context, event):
-    region = context.region
-    rv3d = context.region_data
-    coord = event.mouse_region_x, event.mouse_region_y
-
-    # get the ray from the viewport and mouse
-    view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
-    ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
-
-    ray_target = ray_origin + view_vector
 
 
 #---------------------------
@@ -238,6 +244,7 @@ class ModalDrawOperator(bpy.types.Operator):
 
         viewlayer = bpy.context.view_layer
         result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+#        print("location " + str(location))
         
         center = None
         center_count = 0
@@ -248,6 +255,7 @@ class ModalDrawOperator(bpy.types.Operator):
         strength = context.scene.my_tool.strength
         
         brush_normal.normalize()
+#        print("brush_normal " + str(brush_normal))
 
         if result:
 
@@ -263,6 +271,7 @@ class ModalDrawOperator(bpy.types.Operator):
                     
                     mesh.calc_normals_split()
                     
+#                    print("num mesh loops: " + str(len(mesh.loops))
                     normals = []
                     for l in mesh.loops:
 #                        normals.append(brush_normal)
@@ -271,30 +280,49 @@ class ModalDrawOperator(bpy.types.Operator):
                         pos = mathutils.Vector(v.co)
                         wpos = obj.matrix_world @ pos
 
+#                        print ("---")
+#                        print ("mtx wrld " + str(obj.matrix_world))
+#                        print ("pos " + str(pos))
+#                        print ("wpos " + str(wpos))
+
                         #Normal transform is (l2w ^ -1) ^ -1 ^ T
-                        w2ln = obj.matrix_world
+                        w2ln = obj.matrix_world.copy()
                         w2ln.transpose()
                         
                         nLocal = brush_normal.to_4d()
                         nLocal.w = 0
                         nLocal = w2ln @ nLocal
                         nLocal = nLocal.to_3d()
+                        nLocal.normalize()
+#                        print("brush norm local " + str(nLocal))
+                        
+#                        print("l2w " + str(obj.matrix_world))
+#                        print("w2ln " + str(w2ln))
                         
                         
                         
                         offset = location - wpos
+#                        print ("offset " + str(offset))
+                        
 #                        offset.length_squared / radius * radius
                         t = 1 - offset.length / radius
+#                        print ("t " + str(t))
                         
+#                        print("loop norm " + str(l.normal))
                         if t <= 0:
                             normals.append(l.normal)
                         else:
                             axis = l.normal.cross(nLocal)
-                            angle = brush_normal.angle(l.normal)
+                            angle = nLocal.angle(l.normal)
+                            
+#                            print("->axis " + str(axis))
+#                            print("->angle " + str(math.degrees(angle)))
+                            
                             q = mathutils.Quaternion(axis, angle * t * strength)
                             m = q.to_matrix()
                             
                             newNorm = m @ l.normal
+#                            print("->new norm " + str(newNorm))
                             
                             normals.append(newNorm)
                     
@@ -336,23 +364,9 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.value == "RELEASE":
             self.dragging = False
             return;
-            
-                    
-#        self.drag_start_pos = mouse_pos
-                    
 
 
     def modal(self, context, event):
-        
-        
-            
-    
-#        self._context = context
-
-#        for obj in context.selected_objects:
-#            if obj.type == 'MESH':
-#                mesh = obj.data
-#                success = mesh.update_from_editmode()
             
         context.area.tag_redraw()
 
@@ -369,6 +383,7 @@ class ModalDrawOperator(bpy.types.Operator):
             return {'RUNNING_MODAL'}
 
         elif event.type in {'RET'}:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             return {'FINISHED'}
 
         elif event.type in {'PAGE_UP', 'RIGHT_BRACKET'}:
@@ -387,7 +402,7 @@ class ModalDrawOperator(bpy.types.Operator):
             
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-            print("norm tool cancelled")
+#            print("norm tool cancelled")
             return {'CANCELLED'}
 
         return {'PASS_THROUGH'}
