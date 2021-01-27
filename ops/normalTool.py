@@ -125,15 +125,10 @@ def draw_callback(self, context):
 
     region = context.region
     rv3d = context.region_data
-#    coord = event.mouse_region_x, event.mouse_region_y
 
     viewport_center = (region.x + region.width / 2, region.y + region.height / 2)
     view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, viewport_center)
     ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, viewport_center)
-
-    # get the ray from the viewport and mouse
-#    view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
-#    ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
 
 
     shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
@@ -144,8 +139,6 @@ def draw_callback(self, context):
     
     #Draw cursor
     if self.show_cursor:
-#        m = calc_vertex_transform(self.cursor_object, self.cursor_pos, self.cursor_normal);
-#        m = self.cursor_matrix
         m = calc_vertex_transform_world(self.cursor_pos, self.cursor_normal);
 
         gpu.matrix.push()
@@ -175,19 +168,12 @@ def draw_callback(self, context):
             mesh = obj.data
 
     
-#            bm = bmesh.new()
-#            bm.from_mesh(mesh)
-#            for v in bm.verts:
-#bm.to_mesh(me)
-#bm.free()
             mesh.calc_normals_split()
             
             for l in mesh.loops:
 
-#            for v in mesh.vertices:
                 if not (selOnly and not v.select):
                     
-#                    m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
                     v = mesh.vertices[l.vertex_index]
                     m = calc_vertex_transform(obj, v.co, l.normal)
                     m = m @ mS
@@ -199,21 +185,6 @@ def draw_callback(self, context):
                     shader.uniform_float("color", (1, 1, 0, 1))
                     batch.draw(shader)
                     
-#                    gpu.matrix.push()
-#                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'Y'))
-#                    shader.uniform_float("color", (1, 0, 0, 1))
-#                    batchCircle.draw(shader)
-#                    gpu.matrix.pop()
-#                    
-#                    gpu.matrix.push()
-#                    gpu.matrix.multiply_matrix(mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X'))
-#                    shader.uniform_float("color", (0, 1, 0, 1))
-#                    batchCircle.draw(shader)
-#                    gpu.matrix.pop()
-
-#                    shader.uniform_float("color", (0, 0, 1, 1))
-#                    batchCircle.draw(shader)
-#                    
                     gpu.matrix.pop()
 
 
@@ -236,23 +207,6 @@ class ModalDrawOperator(bpy.types.Operator):
     bl_idname = "kitfox.normal_tool"
     bl_label = "Normal Tool Kitfox"
 
-
-#    prop_brush_type : bpy.props.EnumProperty(
-#        items=(
-#            ('FIXED', "Fixed", "Normals are in a fixed direction"),
-#            ('ATTRACT', "Attract", "Normals point toward target object"),
-#            ('REPEL', "Repel", "Normals point away from target object")
-#        ),
-#        default='FIXED'
-#    )
-#    
-#    prop_strength : bpy.props.FloatProperty(
-#        name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
-#    )
-
-#    prop_normal : bpy.props.FloatVectorProperty(name="Normal", description="Direction of normal in Fixed mode", default = (0, 1, 0))
-#    prop_target : bpy.props.StringProperty(name="Target", description="Object Attract and Repel mode reference", default="")
-#    
     dragging = False
     
     cursor_pos = None
@@ -260,43 +214,9 @@ class ModalDrawOperator(bpy.types.Operator):
     
     bm = None
 
-    def mouse_move(self, context, event):
-        mouse_pos = (event.mouse_region_x, event.mouse_region_y)
-
-        ctx = bpy.context
-
-        region = context.region
-        rv3d = context.region_data
-
-        view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
-        ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
-
-        viewlayer = bpy.context.view_layer
-        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
-        
-        
-        if result:
-            self.show_cursor = True
-            self.cursor_pos = location
-            self.cursor_normal = normal
-            self.cursor_object = object
-            self.cursor_matrix = matrix
-        else:
-            self.show_cursor = False
-
-
-    def mouse_down(self, context, event):
-        if event.value == "PRESS":
-            self.dragging = True
-        elif event.value == "RELEASE":
-            self.dragging = False
-            return;
-            
+    def dab_brush(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         
-#        print("Foobar--")
-
-#        context.scene.my_tool.target = hit_object
         targetObj = context.scene.my_tool.target
 #        if targetObj != None:
 #            print("^^^Tool property target: " + targetObj.name)
@@ -323,6 +243,8 @@ class ModalDrawOperator(bpy.types.Operator):
         brush_normal = context.scene.my_tool.normal
         radius = context.scene.my_tool.radius
         strength = context.scene.my_tool.strength
+        
+        brush_normal.normalize()
 
         if result:
 
@@ -345,6 +267,17 @@ class ModalDrawOperator(bpy.types.Operator):
                         v = mesh.vertices[l.vertex_index]
                         pos = mathutils.Vector(v.co)
                         wpos = obj.matrix_world @ pos
+
+                        #Normal transform is (l2w ^ -1) ^ -1 ^ T
+                        w2ln = obj.matrix_world
+                        w2ln.transpose()
+                        
+                        nLocal = brush_normal.to_4d()
+                        nLocal.w = 0
+                        nLocal = w2ln @ nLocal
+                        nLocal = nLocal.to_3d()
+                        
+                        
                         
                         offset = location - wpos
 #                        offset.length_squared / radius * radius
@@ -353,7 +286,7 @@ class ModalDrawOperator(bpy.types.Operator):
                         if t <= 0:
                             normals.append(l.normal)
                         else:
-                            axis = l.normal.cross(brush_normal)
+                            axis = l.normal.cross(nLocal)
                             angle = brush_normal.angle(l.normal)
                             q = mathutils.Quaternion(axis, angle * t * strength)
                             m = q.to_matrix()
@@ -363,82 +296,48 @@ class ModalDrawOperator(bpy.types.Operator):
                             normals.append(newNorm)
                     
                     mesh.normals_split_custom_set(normals)
-                    
-                    
-#                    mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
-#                    
-#                    normals = []
-#                    for v in mesh.vertices:
-#                        normals.append(brush_normal)
-
-#                    mesh.normals_split_custom_set_from_vertices(normals)
 
 
+    def mouse_move(self, context, event):
+        mouse_pos = (event.mouse_region_x, event.mouse_region_y)
 
-#        me = context.edit_object.data
-#        me.use_auto_smooth = True
-#        
-#        self.bm = bmesh.from_edit_mesh(me)
+        ctx = bpy.context
 
-##        print("updating faces")
-#        for face in self.bm.faces:
-#            for loop in face.loops:
-##                print("-face norm " + str(loop.vert.normal))
-#                loop.vert.normal = brush_normal
-##                loop.vert.co[0] = loop.vert.co[0] + .1
-##                
-#        me = context.edit_object.data
-#        bmesh.update_edit_mesh(me, False, False)
+        region = context.region
+        rv3d = context.region_data
 
+        view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
+        ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
 
-
-
-
-#        for obj in ctx.selected_objects:
-#            if obj.type == 'MESH':
-#                print("Updating mesh " + obj.name)
-                
-#                me = obj.data
-#                bm = bmesh.new()
-#                bm.from_mesh(mesh)
-#                bm = bmesh.from_edit_mesh(me)
-                
-#                for face in self.bm.faces:
-#                    for loop in face.loops:
-##                        loop.vert
-#                        loop.vert.normal = brush_normal
-#                        
-#                me = context.edit_object.data
-#                bmesh.update_edit_mesh(me, False, False)
-#                
-#                bm.to_mesh(mesh)
-#                bm.free()
-                
-#                success = obj.update_from_editmode()
-#                print ("Update from editr mode success: " + success)
-
-
-                
-                
-                
-                #----
-
-
-                
-#                for v in mesh.vertices:
-#                    if not (selOnly and not v.select):
-#                        if center_count == 0:
-#                            center = v.co
-#                        else:
-#                            center += v.co
-#                        center_count += 1
-#                        
-#                        m = calc_gizmo_transform(obj, v.co, v.normal, ray_origin)
-
-
-        self.drag_start_pos = mouse_pos
+        viewlayer = bpy.context.view_layer
+        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+        
+        #Brush cursor display
+        if result:
+            self.show_cursor = True
+            self.cursor_pos = location
+            self.cursor_normal = normal
+            self.cursor_object = object
+            self.cursor_matrix = matrix
+        else:
+            self.show_cursor = False
             
-        pass
+        if self.dragging:
+            self.dab_brush(context, event)
+
+
+    def mouse_down(self, context, event):
+        if event.value == "PRESS":
+            self.dragging = True
+            self.dab_brush(context, event)
+        elif event.value == "RELEASE":
+            self.dragging = False
+            return;
+            
+                    
+#        self.drag_start_pos = mouse_pos
+                    
+
 
     def modal(self, context, event):
         
