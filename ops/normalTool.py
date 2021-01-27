@@ -1,5 +1,7 @@
 import bpy
-import bmesh
+import bpy.utils.previews
+import os
+#import bmesh
 import bgl
 import blf
 import gpu
@@ -514,7 +516,9 @@ class ModalDrawOperator(bpy.types.Operator):
             self._context = context
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
-            self.mouse_path = []
+#            self.mouse_path = []
+
+            context.area.tag_redraw()
 
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
@@ -599,6 +603,36 @@ class NormalToolPanel(bpy.types.Panel):
 
 #---------------------------
 
+
+#class NormalToolTool(bpy.types.WorkSpaceTool):
+#    bl_space_type = 'VIEW_3D'
+#    bl_context_mode = 'OBJECT'
+
+#    # The prefix of the idname should be your add-on name.
+#    bl_idname = "kitfox.normal_tool_tool"
+#    bl_label = "Normal Tool"
+#    bl_description = (
+#        "Adjust the normals of the selected object"
+#    )
+#    bl_icon = "ops.generic.select_circle"
+#    bl_widget = None
+##    bl_keymap = (
+##        ("view3d.select_circle", {"type": 'LEFTMOUSE', "value": 'PRESS'},
+##         {"properties": [("wait_for_input", False)]}),
+##        ("view3d.select_circle", {"type": 'LEFTMOUSE', "value": 'PRESS', "ctrl": True},
+##         {"properties": [("mode", 'SUB'), ("wait_for_input", False)]}),
+##    )
+#    bl_keymap = (
+#        ("kitfox.normal_tool", {"type": 'LEFTMOUSE', "value": 'PRESS'},
+#         {"properties": [("wait_for_input", False)]}),
+#    )
+
+#    def draw_settings(context, layout, tool):
+#        props = tool.operator_properties("kitfox.normal_tool")
+##        layout.prop(props, "mode")
+#        
+#---------------------------
+
 class NormalToolPropsPanel(bpy.types.Panel):
 
     """Properties Panel for the Normal Tool on tool shelf"""
@@ -618,7 +652,12 @@ class NormalToolPropsPanel(bpy.types.Panel):
         scene = context.scene
         settings = scene.my_tool
         
+        pcoll = preview_collections["main"]
+        
+        
         col = layout.column();
+        col.operator("kitfox.normal_tool", text="Start Normal Tool", icon_value = pcoll["normalTool"].icon_id)
+        
         col.prop(settings, "strength")
         col.prop(settings, "normal_length")
         col.prop(settings, "radius")
@@ -646,26 +685,43 @@ class NormalToolPropsPanel(bpy.types.Panel):
 
 #---------------------------
 
+preview_collections = {}
 
 def register():
 
     bpy.utils.register_class(NormalToolSettings)
     bpy.utils.register_class(NormalPickerOperator)
     bpy.utils.register_class(ModalDrawOperator)
-    bpy.utils.register_class(NormalToolPanel)
+#    bpy.utils.register_class(NormalToolPanel)
     bpy.utils.register_class(NormalToolPropsPanel)
+#    bpy.utils.register_tool(NormalToolTool)
 
     bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=NormalToolSettings)
+
+    #Load icons    
+    icons_dir = os.path.join(os.path.dirname(__file__), "../../icons")
+    
+    print("icons dir: " + str(icons_dir))
+    
+    pcoll = bpy.utils.previews.new()
+    pcoll.load("normalTool", os.path.join(icons_dir, "normalTool.png"), 'IMAGE')
+    preview_collections["main"] = pcoll
 
 
 def unregister():
     bpy.utils.unregister_class(NormalToolSettings)
     bpy.utils.unregister_class(NormalPickerOperator)
     bpy.utils.unregister_class(ModalDrawOperator)
-    bpy.utils.unregister_class(NormalToolPanel)
+#    bpy.utils.unregister_class(NormalToolPanel)
     bpy.utils.unregister_class(NormalToolPropsPanel)
+#    bpy.utils.unregister_tool(NormalToolTool)
 
     del bpy.types.Scene.my_tool
+    
+    #Unload icons
+    for pcoll in preview_collections.values():
+        bpy.utils.previews.remove(pcoll)
+    preview_collections.clear()
     
 
 
