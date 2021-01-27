@@ -351,7 +351,7 @@ class ModalDrawOperator(bpy.types.Operator):
                         t = 1 - offset.length / radius
                         
                         if t <= 0:
-                            normals.append((0, 0, 0))
+                            normals.append(l.normal)
                         else:
                             axis = l.normal.cross(brush_normal)
                             angle = brush_normal.angle(l.normal)
