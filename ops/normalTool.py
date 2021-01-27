@@ -70,7 +70,7 @@ class NormalToolSettings(bpy.types.PropertyGroup):
     )
     
     normal_exact : bpy.props.BoolProperty(
-        name="Exact normal", description="Display normal as exact coordinates", default = False
+        name="Exact normal", description="Display normal as exact coordinates", default = True
     )
 
     target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
@@ -286,7 +286,11 @@ class ModalDrawOperator(bpy.types.Operator):
         strength = context.scene.my_tool.strength
         brush_type = context.scene.my_tool.brush_type
         brush_normal = context.scene.my_tool.normal
+        target = context.scene.my_tool.target
         
+
+        if target != None:        
+            print ("Target " + target.name)
         brush_normal.normalize()
 #        print("brush_normal " + str(brush_normal))
 
@@ -329,14 +333,36 @@ class ModalDrawOperator(bpy.types.Operator):
                             nLocal = w2ln @ nLocal
                             nLocal = nLocal.to_3d()
                             nLocal.normalize()
+                        elif brush_type == "ATTRACT":
+                            if target != None:
+                                m = obj.matrix_world.copy()
+                                m.invert()
+                                targetLoc = m @ target.matrix_world.translation
+                                locationLoc = m @ location
+                                
+                                nLocal = targetLoc - pos
+                                nLocal.normalize()
+                        elif brush_type == "REPEL":
+                            if target != None:
+                                m = obj.matrix_world.copy()
+                                m.invert()
+                                targetLoc = m @ target.matrix_world.translation
+                                locationLoc = m @ location
+                                
+                                nLocal = pos - targetLoc
+                                nLocal.normalize()
+                                
+#                                print("Setting nLocal")
+                            
+#                                nLocal = mathutils.Vector(v.normal)
                         elif brush_type == "VERTEX":
                             nLocal = mathutils.Vector(v.normal)
-                            pass
 #                        print("brush norm local " + str(nLocal))
                         
 #                        print("l2w " + str(obj.matrix_world))
 #                        print("w2ln " + str(w2ln))
                         
+#                        print("nLocal " + str(nLocal))                        
                         
                         
                         offset = location - wpos
@@ -347,7 +373,7 @@ class ModalDrawOperator(bpy.types.Operator):
 #                        print ("t " + str(t))
                         
 #                        print("loop norm " + str(l.normal))
-                        if t <= 0:
+                        if t <= 0 or nLocal == None:
                             normals.append(l.normal)
                         else:
                             axis = l.normal.cross(nLocal)
@@ -591,8 +617,9 @@ class NormalToolPropsPanel(bpy.types.Panel):
 
         col = layout.column();
 #                    context.scene.my_tool.normal = normal
+        brush_type = context.scene.my_tool.brush_type
 
-        if str(context.scene.my_tool.brush_type) == "FIXED":
+        if brush_type == "FIXED":
             if not context.scene.my_tool.normal_exact:
                 col.label(text="Normal:")
                 col.prop(settings, "normal", text="")
@@ -600,7 +627,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
                 col.prop(settings, "normal", expand = True)
             col.prop(settings, "normal_exact")
             col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
-        else:
+        elif brush_type == "ATTRACT" or brush_type == "REPEL":
             col.prop(settings, "target")
         
 
