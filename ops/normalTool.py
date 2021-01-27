@@ -120,7 +120,6 @@ def calc_gizmo_transform(obj, coord, normal, ray_origin):
 
 
 def draw_callback(self, context):
-#    print("draw_callback_px");
     ctx = bpy.context
 
     region = context.region
@@ -136,10 +135,14 @@ def draw_callback(self, context):
     batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
 
     shader.bind();
+
+    brush_radius = context.scene.my_tool.radius
     
     #Draw cursor
     if self.show_cursor:
         m = calc_vertex_transform_world(self.cursor_pos, self.cursor_normal);
+        mS = mathutils.Matrix.Scale(brush_radius, 4)
+        m = m @ mS
 
         gpu.matrix.push()
         
@@ -365,6 +368,23 @@ class ModalDrawOperator(bpy.types.Operator):
             self.mouse_down(context, event)
             return {'RUNNING_MODAL'}
 
+        elif event.type in {'RET'}:
+            return {'FINISHED'}
+
+        elif event.type in {'PAGE_UP'}:
+            if event.value == "PRESS":
+                brush_radius = context.scene.my_tool.radius
+                brush_radius = brush_radius + .1
+                context.scene.my_tool.radius = brush_radius
+            return {'RUNNING_MODAL'}
+
+        elif event.type in {'PAGE_DOWN'}:
+            if event.value == "PRESS":
+                brush_radius = context.scene.my_tool.radius
+                brush_radius = max(brush_radius - .1, .1)
+                context.scene.my_tool.radius = brush_radius
+            return {'RUNNING_MODAL'}
+            
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             print("norm tool cancelled")
@@ -489,7 +509,8 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col = layout.column();
         col.prop(settings, "strength")
         col.prop(settings, "normal_length")
-        col.prop(settings, "selected_only")
+        col.prop(settings, "radius")
+#        col.prop(settings, "selected_only")
 
         row = layout.row();
         row.prop(settings, "brush_type", expand = True)
