@@ -14,36 +14,33 @@
 
 
 bl_info = {
-    "name": "Tool for adjusting normals",
-    "description": "Provides gizmo so you can interactively adjust normals.  Also provides some useful operators.",
+    "name": "Normal Tool",
+    "description": "Provides a brush that lets you interactively adjust normals.  Also provides some useful operators.",
     "author": "Mark McKay",
     "version": (1, 0),
     "blender": (2, 80, 0),
-    "location": "View3D > Add > Mesh",
-    "wiki_url": "https://github.com/blackears/blenderNormalTool",
-    "tracker_url": "https://github.com/blackears/blenderNormalTool",
-    "support": "COMMUNITY",
-    "category": "Add Mesh"
+    "location": "View3D",
+    "wiki_url": "https://github.com/blackears/normalTool",
+    "tracker_url": "https://github.com/blackears/normalTool",
+    "category": "View 3D"
 }
 
+import bpy
+import importlib
+
+
 if "bpy" in locals():
-    import importlib
     if "normalTool" in locals():
         importlib.reload(normalTool)
-#    if "kitfoxStairsCurved" in locals():
-#        importlib.reload(kitfoxStairs)
+    else:
+        from .ops import normalTool
 else:
-    from .gizmos import normalTool
-#    from .operators import kitfoxStairsCurved
-
-import bpy
+    from .ops import normalTool
 
 def register():
     normalTool.register()
-#    kitfoxStairsCurved.register()
 
 
 def unregister():
     normalTool.unregister()
-#    kitfoxStairsCurved.unregister()
 

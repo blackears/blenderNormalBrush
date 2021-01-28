@@ -229,20 +229,20 @@ def draw_callback(self, context):
             
             for l in mesh.loops:
 
-                if not (selOnly and not v.select):
+#                if not (selOnly and not v.select):
                     
-                    v = mesh.vertices[l.vertex_index]
-                    m = calc_vertex_transform(obj, v.co, l.normal)
-                    m = m @ mS
+                v = mesh.vertices[l.vertex_index]
+                m = calc_vertex_transform(obj, v.co, l.normal)
+                m = m @ mS
 
-            
-                    gpu.matrix.push()
-                    
-                    gpu.matrix.multiply_matrix(m)
-                    shader.uniform_float("color", (1, 1, 0, 1))
-                    batchLine.draw(shader)
-                    
-                    gpu.matrix.pop()
+        
+                gpu.matrix.push()
+                
+                gpu.matrix.multiply_matrix(m)
+                shader.uniform_float("color", (1, 1, 0, 1))
+                batchLine.draw(shader)
+                
+                gpu.matrix.pop()
 
     bgl.glDisable(bgl.GL_DEPTH_TEST)
 
@@ -698,8 +698,12 @@ def register():
 
     bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=NormalToolSettings)
 
-    #Load icons    
-    icons_dir = os.path.join(os.path.dirname(__file__), "../../icons")
+    #Load icons
+    icon_path = "../icons"
+    if __name__ == "__main__":
+        icon_path = "../../source/icons"
+        
+    icons_dir = os.path.join(os.path.dirname(__file__), icon_path)
     
     print("icons dir: " + str(icons_dir))
     

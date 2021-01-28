@@ -16,7 +16,6 @@ def copytree(src, dst):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
         if os.path.isdir(s):
-            #destDir = os.path.join(dst, item)
             os.mkdir(d)
             copytree(s, d)
         else:
@@ -26,36 +25,20 @@ def copytree(src, dst):
                 continue
                 
             shutil.copy(s, d)
-        
-        
-#        s = os.path.join("source", item)
-#        d = os.path.join("build", item)
- #       if os.path.isdir(s):
-  #          shutil.copytree(
 
 if __name__ == '__main__':
     curPath = os.getcwd()
     if os.path.exists('build'):
         shutil.rmtree('build')
     os.mkdir('build')
+    os.mkdir('build/normalTool')
     
     if os.path.exists('deploy'):
         shutil.rmtree('deploy')
     os.mkdir('deploy')
 
-    copytree("source", "build");
+    copytree("source", "build/normalTool");
 
     shutil.make_archive("deploy/normalTool", "zip", "build")
 
-    
-#    zipf = zipfile.ZipFile('deploy/normalTool.zip', 'w', zipfile.ZIP_DEFLATED)
-
-#    zipdir('source/', zipf)
-
-#    zipf.write('__init__.py')
-#    zipdir('ops/', zipf)
-    #zipdir('icons/', zipf)
-    
-    zipf.close()
-    
     
