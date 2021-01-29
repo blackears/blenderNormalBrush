@@ -34,13 +34,22 @@ if "bpy" in locals():
         importlib.reload(normalTool)
     else:
         from .ops import normalTool
+        
+    if "fixSeamNormals" in locals():
+        importlib.reload(fixSeamNormals)
+    else:
+        from .ops import fixSeamNormals
+        
 else:
     from .ops import normalTool
+    from .ops import fixSeamNormals
 
 def register():
     normalTool.register()
+    fixSeamNormals.register()
 
 
 def unregister():
     normalTool.unregister()
+    fixSeamNormals.unregister()
 

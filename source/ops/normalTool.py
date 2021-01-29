@@ -636,7 +636,7 @@ class NormalToolPanel(bpy.types.Panel):
 class NormalToolPropsPanel(bpy.types.Panel):
 
     """Properties Panel for the Normal Tool on tool shelf"""
-    bl_label = "Normal Tool Properties Panel"
+    bl_label = "Normal Tool"
     bl_idname = "OBJECT_PT_normal_tool_props"
     bl_space_type = 'VIEW_3D'
 #    bl_region_type = 'TOOL_PROPS'
@@ -681,6 +681,8 @@ class NormalToolPropsPanel(bpy.types.Panel):
             col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
         elif brush_type == "ATTRACT" or brush_type == "REPEL":
             col.prop(settings, "target")
+            
+#        layout.separator()
         
 
 #---------------------------
