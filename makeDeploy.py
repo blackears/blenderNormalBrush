@@ -31,14 +31,14 @@ if __name__ == '__main__':
     if os.path.exists('build'):
         shutil.rmtree('build')
     os.mkdir('build')
-    os.mkdir('build/normalTool')
+    os.mkdir('build/normalTools')
     
     if os.path.exists('deploy'):
         shutil.rmtree('deploy')
     os.mkdir('deploy')
 
-    copytree("source", "build/normalTool");
+    copytree("source", "build/normalTools");
 
-    shutil.make_archive("deploy/normalTool", "zip", "build")
+    shutil.make_archive("deploy/normalTools", "zip", "build")
 
     
