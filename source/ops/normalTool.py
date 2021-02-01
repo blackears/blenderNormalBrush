@@ -532,6 +532,7 @@ class NormalPickerOperator(bpy.types.Operator):
     """Pick normal"""
     bl_idname = "kitfox.nt_pick_normal"
     bl_label = " Pick Normal"
+    picking = False
 
     def mouse_down(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
@@ -549,20 +550,31 @@ class NormalPickerOperator(bpy.types.Operator):
         result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
         
         if result:
-            print("--picked " + str(normal))
+#            print("--picked " + str(normal))
             context.scene.my_tool.normal = normal
             context.area.tag_redraw()
 
 
     def modal(self, context, event):
-        if event.type == 'LEFTMOUSE':
+        if event.type == 'MOUSEMOVE':
+            if self.picking:
+                context.window.cursor_set("EYEDROPPER")
+            else:
+                context.window.cursor_set("DEFAULT")
+            return {'PASS_THROUGH'}
+
+        elif event.type == 'LEFTMOUSE':
+            self.picking = False
             self.mouse_down(context, event)
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            context.window.cursor_set("DEFAULT")
             return {'FINISHED'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            self.picking = False
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             print("pick target object cancelled")
+            context.window.cursor_set("DEFAULT")
             return {'CANCELLED'}
         else:
             return {'PASS_THROUGH'}
@@ -577,6 +589,9 @@ class NormalPickerOperator(bpy.types.Operator):
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
             context.window_manager.modal_handler_add(self)
+            
+            context.window.cursor_set("EYEDROPPER")
+            self.picking = True
             return {'RUNNING_MODAL'}
         else:
             self.report({'WARNING'}, "View3D not found, cannot run operator")
