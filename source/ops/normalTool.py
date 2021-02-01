@@ -224,6 +224,7 @@ class ModalDrawOperator(bpy.types.Operator):
     """Adjust normals"""
     bl_idname = "kitfox.normal_tool"
     bl_label = "Normal Tool Kitfox"
+    bl_options = {"REGISTER", "UNDO"}
 
     dragging = False
     
