@@ -10,31 +10,6 @@ import math
 from gpu_extras.batch import batch_for_shader
 from bpy_extras import view3d_utils
 
-#def normal_update(self, context):
-#    #Set a flag when the normal is changed to get around not receiving a 
-#    # mouse up event when interacting with the panel
-#    print ("Callback")
-
-#    #I really hate python    
-#    tool = context.scene.my_tool
-#    
-#    ox = tool.old_normal.x
-#    oy = tool.old_normal.y
-#    oz = tool.old_normal.z
-#    nx = tool.normal.x
-#    ny = tool.normal.y
-#    nz = tool.normal.z
-#    
-#    if ox != nx and oy != ny and oz != nz:
-#        print ("Callback - CHANGED!")
-#        print ("old norm " + str(tool.old_normal))
-#        print ("norm " + str(tool.normal))
-
-##        print ("old norm x:" + str(tool.old_normal.x))
-
-#        tool.normal_changed = True
-#        tool.old_normal = (nx, ny, nz)
-
 
 class NormalToolSettings(bpy.types.PropertyGroup):
     brush_type : bpy.props.EnumProperty(
@@ -82,11 +57,6 @@ class NormalToolSettings(bpy.types.PropertyGroup):
 
     target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
     
-        
-#    normal_changed = False
-#    normal_changed : bpy.props.BoolProperty(default=False)
-#    old_normal : bpy.props.FloatVectorProperty(subtype="DIRECTION")
-#        
 
 #---------------------------
         
@@ -297,11 +267,6 @@ class ModalDrawOperator(bpy.types.Operator):
         front_faces_only = context.scene.my_tool.front_faces_only
         
 
-#        if target != None:        
-#            print ("Target " + target.name)
-#        brush_normal.normalize()
-#        print("brush_normal " + str(brush_normal))
-
         if result:
 
         #---
@@ -473,14 +438,14 @@ class ModalDrawOperator(bpy.types.Operator):
             
         elif event.type == 'LEFTMOUSE':
             self.mouse_down(context, event)
-            return {'PASS_THROUGH'}
-#            return {'RUNNING_MODAL'}
-
-        elif event.type in {'Z'}:
-            #Kludge to get around FloatVectorProperty(subtype='DIRECTION') error
-            self.dragging = False
+#            return {'PASS_THROUGH'}
             return {'RUNNING_MODAL'}
-        
+
+#        elif event.type in {'Z'}:
+#            #Kludge to get around FloatVectorProperty(subtype='DIRECTION') error
+#            self.dragging = False
+#            return {'RUNNING_MODAL'}
+#        
         elif event.type in {'RET'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             return {'FINISHED'}
@@ -515,8 +480,6 @@ class ModalDrawOperator(bpy.types.Operator):
             # draw in view space with 'POST_VIEW' and 'PRE_VIEW'
             self._context = context
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
-
-#            self.mouse_path = []
 
             context.area.tag_redraw()
 
@@ -694,6 +657,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
                 col.prop(settings, "normal", expand = True)
             col.prop(settings, "normal_exact")
             col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
+            
         elif brush_type == "ATTRACT" or brush_type == "REPEL":
             col.prop(settings, "target")
             
