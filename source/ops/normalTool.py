@@ -269,10 +269,6 @@ class ModalDrawOperator(bpy.types.Operator):
         
 
         if result:
-
-        #---
-        #This works, but only in object mode
-#        success = obj.update_from_editmode()
         
             for obj in ctx.selected_objects:
                 if obj.type == 'MESH':
@@ -404,13 +400,29 @@ class ModalDrawOperator(bpy.types.Operator):
 
     def mouse_down(self, context, event):
         if event.value == "PRESS":
+            
+            mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+            region = context.region
+            rv3d = context.region_data
+
+            view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
+            ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
+
+            viewlayer = bpy.context.view_layer
+            result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+
+            if result == False or object.select_get() == False:
+                return {'PASS_THROUGH'}
+                            
 #            print ("m DOWN")
             self.dragging = True
             self.dab_brush(context, event)
+            
         elif event.value == "RELEASE":
 #            print ("m UP")
             self.dragging = False
-            return;
+
+        return {'RUNNING_MODAL'}
 
 
     def modal(self, context, event):
@@ -438,9 +450,9 @@ class ModalDrawOperator(bpy.types.Operator):
                 return {'PASS_THROUGH'}
             
         elif event.type == 'LEFTMOUSE':
-            self.mouse_down(context, event)
+            return self.mouse_down(context, event)
 #            return {'PASS_THROUGH'}
-            return {'RUNNING_MODAL'}
+#            return {'RUNNING_MODAL'}
 
 #        elif event.type in {'Z'}:
 #            #Kludge to get around FloatVectorProperty(subtype='DIRECTION') error
