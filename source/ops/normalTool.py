@@ -1,7 +1,6 @@
 import bpy
 import bpy.utils.previews
 import os
-#import bmesh
 import bgl
 import blf
 import gpu
@@ -148,7 +147,7 @@ def draw_callback(self, context):
     
     #Draw cursor
     if self.show_cursor:
-        brush_radius = context.scene.my_tool.radius
+        brush_radius = context.scene.normal_brush_props.radius
     
         m = calc_vertex_transform_world(self.cursor_pos, self.cursor_normal);
         mS = mathutils.Matrix.Scale(brush_radius, 4)
@@ -170,7 +169,7 @@ def draw_callback(self, context):
         #Brush normal direction
         gpu.matrix.push()
         
-        brush_normal = context.scene.my_tool.normal
+        brush_normal = context.scene.normal_brush_props.normal
         m = calc_vertex_transform_world(self.cursor_pos, brush_normal);
         gpu.matrix.multiply_matrix(m)
 
@@ -184,9 +183,9 @@ def draw_callback(self, context):
     shader.uniform_float("color", (1, 1, 0, 1))
 
 
-    selOnly = context.scene.my_tool.selected_only
+    selOnly = context.scene.normal_brush_props.selected_only
 
-    normLength = context.scene.my_tool.normal_length
+    normLength = context.scene.normal_brush_props.normal_length
     mS = mathutils.Matrix.Scale(normLength, 4)
 
     for obj in ctx.selected_objects:
@@ -236,7 +235,7 @@ class ModalDrawOperator(bpy.types.Operator):
     def dab_brush(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         
-        targetObj = context.scene.my_tool.target
+        targetObj = context.scene.normal_brush_props.target
 #        if targetObj != None:
 #            print("^^^Tool property target: " + targetObj.name)
 #        else:
@@ -259,13 +258,13 @@ class ModalDrawOperator(bpy.types.Operator):
         center = None
         center_count = 0
 
-        selOnly = context.scene.my_tool.selected_only
-        radius = context.scene.my_tool.radius
-        strength = context.scene.my_tool.strength
-        brush_type = context.scene.my_tool.brush_type
-        brush_normal = context.scene.my_tool.normal
-        target = context.scene.my_tool.target
-        front_faces_only = context.scene.my_tool.front_faces_only
+        selOnly = context.scene.normal_brush_props.selected_only
+        radius = context.scene.normal_brush_props.radius
+        strength = context.scene.normal_brush_props.strength
+        brush_type = context.scene.normal_brush_props.brush_type
+        brush_normal = context.scene.normal_brush_props.normal
+        target = context.scene.normal_brush_props.target
+        front_faces_only = context.scene.normal_brush_props.front_faces_only
         
 
         if result:
@@ -429,11 +428,11 @@ class ModalDrawOperator(bpy.types.Operator):
 
         #We are not receiving a mouse up event after editing the normal,
         # so check for it here
-#        print ("modal normal_changed: " + str(context.scene.my_tool.normal_changed))   
-#        if context.scene.my_tool.normal_changed:
+#        print ("modal normal_changed: " + str(context.scene.normal_brush_props.normal_changed))   
+#        if context.scene.normal_brush_props.normal_changed:
 #            print ("reactng to normal chagne!!!: ")   
 #            self.dragging = False
-#            context.scene.my_tool.normal_changed = False;
+#            context.scene.normal_brush_props.normal_changed = False;
 #            
         context.area.tag_redraw()
 
@@ -465,16 +464,16 @@ class ModalDrawOperator(bpy.types.Operator):
 
         elif event.type in {'PAGE_UP', 'RIGHT_BRACKET'}:
             if event.value == "PRESS":
-                brush_radius = context.scene.my_tool.radius
+                brush_radius = context.scene.normal_brush_props.radius
                 brush_radius = brush_radius + .1
-                context.scene.my_tool.radius = brush_radius
+                context.scene.normal_brush_props.radius = brush_radius
             return {'RUNNING_MODAL'}
 
         elif event.type in {'PAGE_DOWN', 'LEFT_BRACKET'}:
             if event.value == "PRESS":
-                brush_radius = context.scene.my_tool.radius
+                brush_radius = context.scene.normal_brush_props.radius
                 brush_radius = max(brush_radius - .1, .1)
-                context.scene.my_tool.radius = brush_radius
+                context.scene.normal_brush_props.radius = brush_radius
             return {'RUNNING_MODAL'}
             
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
@@ -527,7 +526,7 @@ class NormalPickerOperator(bpy.types.Operator):
         
         if result:
 #            print("--picked " + str(normal))
-            context.scene.my_tool.normal = normal
+            context.scene.normal_brush_props.normal = normal
             context.area.tag_redraw()
 
 
@@ -627,7 +626,7 @@ class NormalToolPanel(bpy.types.Panel):
 class NormalToolPropsPanel(bpy.types.Panel):
 
     """Properties Panel for the Normal Tool on tool shelf"""
-    bl_label = "Normal Tool"
+    bl_label = "Normal Brush"
     bl_idname = "OBJECT_PT_normal_tool_props"
     bl_space_type = 'VIEW_3D'
 #    bl_region_type = 'TOOL_PROPS'
@@ -641,7 +640,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
         layout = self.layout
 
         scene = context.scene
-        settings = scene.my_tool
+        settings = scene.normal_brush_props
         
         pcoll = preview_collections["main"]
         
@@ -659,11 +658,11 @@ class NormalToolPropsPanel(bpy.types.Panel):
         row.prop(settings, "brush_type", expand = True)
 
         col = layout.column();
-#                    context.scene.my_tool.normal = normal
-        brush_type = context.scene.my_tool.brush_type
+#                    context.scene.normal_brush_props.normal = normal
+        brush_type = context.scene.normal_brush_props.brush_type
 
         if brush_type == "FIXED":
-            if not context.scene.my_tool.normal_exact:
+            if not context.scene.normal_brush_props.normal_exact:
                 col.label(text="Normal:")
                 col.prop(settings, "normal", text="")
             else:
@@ -690,7 +689,7 @@ def register():
     bpy.utils.register_class(NormalToolPropsPanel)
 #    bpy.utils.register_tool(NormalToolTool)
 
-    bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=NormalToolSettings)
+    bpy.types.Scene.normal_brush_props = bpy.props.PointerProperty(type=NormalToolSettings)
 
     #Load icons
     icon_path = "../icons"
@@ -714,7 +713,7 @@ def unregister():
     bpy.utils.unregister_class(NormalToolPropsPanel)
 #    bpy.utils.unregister_tool(NormalToolTool)
 
-    del bpy.types.Scene.my_tool
+    del bpy.types.Scene.normal_brush_props
     
     #Unload icons
     for pcoll in preview_collections.values():
