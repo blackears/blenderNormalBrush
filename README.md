@@ -38,13 +38,13 @@ In **Attract** and **Repel** modes, indicates the target objects that normals wi
 
 Also included under the **Fix Seam Normals** menu is a control to automatically copy normals across seams.  Simply select two or more objects with edges that meet.  Then press the **Copy Seam Normals** button.  The normals from the active object will be copied to the other selected objects wherever the selected object' vertex is snapped to the same spot as the active object's vertex.
 
-## Installation
-
-To install, download this archive as a .zip file.  Then start blender and open your Edit > Preferences.  Select the Add-ons tab and then press the Install button.  Browse to the .zip file and select it.  Finally, tick the checkbox next to Add Mesh: Normal Brush.
-
 ## Building
 
 To build, execute the *makeDeploy.py* script in the root of the project.  It will create a directory called *deploy* that contains a zip file containing the addon.
+
+## Installation
+
+To install, Start blender and open your Edit > Preferences.  Select the Add-ons tab and then press the Install button.  Browse to the .zip file that you built in the build stage and select it.  Finally, tick the checkbox next to Add Mesh: Normal Brush.
 
 ## Further Information
 
