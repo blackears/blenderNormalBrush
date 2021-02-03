@@ -48,7 +48,9 @@ To install, start Blender and select Edit > Preferences from the menubar.  Selec
 
 ## Further Information
 
-This addon is under review and will soon be distributed on the Blender market.
+This addon is available from the Blender market:
+
+https://blendermarket.com/products/normal-brush
 
 A video giving a quick tour of the plugin is available here:
 
