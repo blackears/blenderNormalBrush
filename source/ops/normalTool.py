@@ -521,7 +521,7 @@ class ModalDrawOperator(bpy.types.Operator):
 class NormalPickerOperator(bpy.types.Operator):
     """Pick normal"""
     bl_idname = "kitfox.nt_pick_normal"
-    bl_label = " Pick Normal"
+    bl_label = "Pick Normal"
     picking = False
 
     def mouse_down(self, context, event):
@@ -596,7 +596,7 @@ class NormalToolPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_normal_tool"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
-#    bl_context = "object"
+    bl_context = "objectmode"
 
     def draw(self, context):
         layout = self.layout
@@ -646,7 +646,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
 #    bl_region_type = 'TOOL_PROPS'
     bl_region_type = 'UI'
-#    bl_context = "object"
+    bl_context = "objectmode"
     bl_category = "Kitfox"
 
         
