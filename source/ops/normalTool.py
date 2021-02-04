@@ -21,6 +21,8 @@ import blf
 import gpu
 import mathutils
 import math
+import bmesh
+
 from gpu_extras.batch import batch_for_shader
 from bpy_extras import view3d_utils
 
@@ -244,12 +246,92 @@ class ModalDrawOperator(bpy.types.Operator):
     bl_label = "Normal Tool Kitfox"
     bl_options = {"REGISTER", "UNDO"}
 
-    dragging = False
+    # dragging = False
     
-    cursor_pos = None
-    show_cursor = False
+    # cursor_pos = None
+    # show_cursor = False
     
-    bm = None
+    # bm = None
+
+    def __init__(self):
+        self.dragging = False
+        
+        self.cursor_pos = None
+        self.show_cursor = False
+        
+#        self.bm = None
+        self.history = []
+        self.history_idx = -1
+        
+
+    def history_snapshot(self, context):
+        print("SNAPSHOT ")
+        map = {}
+        for obj in context.selected_objects:
+            if obj.type == 'MESH':
+                bm = bmesh.new()
+                
+                mesh = obj.data
+                bm.from_mesh(mesh)
+                map[obj] = bm
+                
+        self.history.append(map)
+        self.history_idx += 1
+
+        print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
+        
+    def history_undo(self, context):
+        print("UNDO history_idx " + str(self.history_idx))
+    
+        if (self.history_idx == 0):
+            return
+            
+        self.history_idx -= 1
+#        print("history_idx changed to " + str(self.history_idx))
+#        print("history " + str(self.history))
+        #print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
+       
+        map = self.history[self.history_idx]
+        
+        for obj in context.selected_objects:
+            if obj.type == 'MESH':
+                bm = map[obj]
+#                print("Found obj " + obj.name + " " + str(bm))
+                
+                mesh = obj.data
+                bm.to_mesh(mesh)
+                mesh.update()
+                
+    def history_redo(self, context):
+        print("REDO history_idx " + str(self.history_idx))
+    
+        if (self.history_idx == len(self.history) - 1):
+            return
+            
+        self.history_idx += 1
+#        print("history_idx changed to " + str(self.history_idx))
+#        print("history " + str(self.history))
+        #print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
+       
+        map = self.history[self.history_idx]
+        
+        for obj in context.selected_objects:
+            if obj.type == 'MESH':
+                bm = map[obj]
+#                print("Found obj " + obj.name + " " + str(bm))
+                
+                mesh = obj.data
+                bm.to_mesh(mesh)
+                mesh.update()
+        
+    def history_clear(self, context):
+        for map in self.history:
+            for obj in map:
+                bm = map[obj]
+                bm.free()
+                
+        self.history = []
+        
 
     def dab_brush(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
@@ -443,9 +525,11 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.value == "RELEASE":
 #            print ("m UP")
             self.dragging = False
+            self.history_snapshot(context)
+
 
         return {'RUNNING_MODAL'}
-
+    
 
     def modal(self, context, event):
 
@@ -477,14 +561,27 @@ class ModalDrawOperator(bpy.types.Operator):
 #            return {'PASS_THROUGH'}
 #            return {'RUNNING_MODAL'}
 
-#        elif event.type in {'Z'}:
-#            #Kludge to get around FloatVectorProperty(subtype='DIRECTION') error
-#            self.dragging = False
-#            return {'RUNNING_MODAL'}
-#        
+        elif event.type in {'Z'}:
+            if event.ctrl:
+                if event.value == "RELEASE":
+#                    print("CTRL-Z");
+                    self.history_undo(context)
+
+                return {'RUNNING_MODAL'}
+            if event.shift:
+                if event.value == "RELEASE":
+#                    print("SHIFT-Z");
+                    self.history_redo(context)
+                return {'RUNNING_MODAL'}
+                
+            return {'RUNNING_MODAL'}
+        
         elif event.type in {'RET'}:
-            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-            return {'FINISHED'}
+            if event.value == 'RELEASE':
+                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                self.history_clear(context)
+                return {'FINISHED'}
+            return {'RUNNING_MODAL'}
 
         elif event.type in {'PAGE_UP', 'RIGHT_BRACKET'}:
             if event.value == "PRESS":
@@ -501,9 +598,11 @@ class ModalDrawOperator(bpy.types.Operator):
             return {'RUNNING_MODAL'}
             
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
-            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-#            print("norm tool cancelled")
-            return {'CANCELLED'}
+            if event.value == 'RELEASE':
+                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                self.history_clear(context)            
+                return {'CANCELLED'}
+            return {'RUNNING_MODAL'}
 
         return {'PASS_THROUGH'}
 #        return {'RUNNING_MODAL'}
@@ -518,6 +617,8 @@ class ModalDrawOperator(bpy.types.Operator):
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
             context.area.tag_redraw()
+            self.history_clear(context)
+            self.history_snapshot(context)
 
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
