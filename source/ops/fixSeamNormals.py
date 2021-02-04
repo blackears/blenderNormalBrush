@@ -193,7 +193,6 @@ def unregister():
     bpy.utils.unregister_class(FixSeamNormalsOperator)
     bpy.utils.unregister_class(FixSeamNormalPropsPanel)
 
-    del bpy.types.Scene.fix_seam_normals_tool
     
 
 

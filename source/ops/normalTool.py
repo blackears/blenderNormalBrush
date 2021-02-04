@@ -43,6 +43,10 @@ class NormalToolSettings(bpy.types.PropertyGroup):
     strength : bpy.props.FloatProperty(
         name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
     )
+
+    use_pressure : bpy.props.BoolProperty(
+        name="Pen Pressure", description="If true, pen pressure is used to adjust strength", default = True
+    )
     
     normal_length : bpy.props.FloatProperty(
         name="Normal Length", description="Display length of normal", default = 1, min=0, soft_max = 1
@@ -276,6 +280,7 @@ class ModalDrawOperator(bpy.types.Operator):
         selOnly = context.scene.normal_brush_props.selected_only
         radius = context.scene.normal_brush_props.radius
         strength = context.scene.normal_brush_props.strength
+        use_pressure = context.scene.normal_brush_props.use_pressure
         brush_type = context.scene.normal_brush_props.brush_type
         brush_normal = context.scene.normal_brush_props.normal
         target = context.scene.normal_brush_props.target
@@ -371,8 +376,11 @@ class ModalDrawOperator(bpy.types.Operator):
                                 
     #                            print("->axis " + str(axis))
     #                            print("->angle " + str(math.degrees(angle)))
+                                atten = strength
+                                if use_pressure:
+                                    atten *= event.pressure
                                 
-                                q = mathutils.Quaternion(axis, angle * t * strength)
+                                q = mathutils.Quaternion(axis, angle * t * atten)
                                 m = q.to_matrix()
                                 
                                 newNorm = m @ l.normal
@@ -456,6 +464,7 @@ class ModalDrawOperator(bpy.types.Operator):
             return {'PASS_THROUGH'}
 
         elif event.type == 'MOUSEMOVE':
+#            print("event " + str(dir(event)))
             self.mouse_move(context, event)
             
             if self.dragging:
@@ -540,7 +549,6 @@ class NormalPickerOperator(bpy.types.Operator):
         result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
         
         if result:
-#            print("--picked " + str(normal))
             context.scene.normal_brush_props.normal = normal
             context.area.tag_redraw()
 
@@ -664,6 +672,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col.operator("kitfox.normal_tool", text="Start Normal Tool", icon_value = pcoll["normalTool"].icon_id)
         
         col.prop(settings, "strength")
+        col.prop(settings, "use_pressure")
         col.prop(settings, "normal_length")
         col.prop(settings, "radius")
         col.prop(settings, "front_faces_only")
