@@ -13,6 +13,9 @@ The **Normal Brush** submenu contains controls for the brush.  To begin, select 
 ##### Strength
 Adjust the strength of the brush stroke.
 
+##### Pen Pressure
+If checked, the strengh of the brush stroke is multiplied by the pressure of your pen.
+
 ##### Normal Length
 Change the display size normals are drawn in the overlay.
 
@@ -33,6 +36,9 @@ In **Fixed** mode, indicates the direction of the normal you are painting.  You 
 
 ##### Target
 In **Attract** and **Repel** modes, indicates the target objects that normals will point toward/away from.
+
+##### Undo/Redo
+While the tool is running, you can use **CTRL-Z** to undo your most recent brush stroke and **CTRL_SHFIT_Z** to redo it.  The history is limited to 10 strokes.  Once you press **Enter** to finish editing normals, all your changes are added to Blender's undo queue as a group and you can no longer undo individual strokes.
 
 ### Fix Seam Normals Tool
 
