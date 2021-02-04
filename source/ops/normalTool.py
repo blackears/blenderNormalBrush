@@ -262,7 +262,7 @@ class ModalDrawOperator(bpy.types.Operator):
             bm.free()
 
     def history_snapshot(self, context):
-        print("SNAPSHOT ")
+#        print("SNAPSHOT ")
         map = {}
         for obj in context.selected_objects:
             if obj.type == 'MESH':
@@ -287,10 +287,10 @@ class ModalDrawOperator(bpy.types.Operator):
         self.history.append(map)
         self.history_idx += 1
 
-        print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
+#        print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
         
     def history_undo(self, context):
-        print("UNDO history_idx " + str(self.history_idx))
+ #       print("UNDO history_idx " + str(self.history_idx))
     
         if (self.history_idx == 0):
             return
@@ -312,7 +312,7 @@ class ModalDrawOperator(bpy.types.Operator):
                 mesh.update()
                 
     def history_redo(self, context):
-        print("REDO history_idx " + str(self.history_idx))
+  #      print("REDO history_idx " + str(self.history_idx))
     
         if (self.history_idx == len(self.history) - 1):
             return
@@ -570,16 +570,17 @@ class ModalDrawOperator(bpy.types.Operator):
 
         elif event.type in {'Z'}:
             if event.ctrl:
-                if event.value == "RELEASE":
-#                    print("CTRL-Z");
-                    self.history_undo(context)
+                if event.shift:
+                    if event.value == "RELEASE":
+    #                    print("SHIFT-Z");
+                        self.history_redo(context)
+                    return {'RUNNING_MODAL'}
+                else:
+                    if event.value == "RELEASE":
+    #                    print("CTRL-Z");
+                        self.history_undo(context)
 
-                return {'RUNNING_MODAL'}
-            if event.shift:
-                if event.value == "RELEASE":
-#                    print("SHIFT-Z");
-                    self.history_redo(context)
-                return {'RUNNING_MODAL'}
+                    return {'RUNNING_MODAL'}
                 
             return {'RUNNING_MODAL'}
         
