@@ -246,23 +246,20 @@ class ModalDrawOperator(bpy.types.Operator):
     bl_label = "Normal Tool Kitfox"
     bl_options = {"REGISTER", "UNDO"}
 
-    # dragging = False
-    
-    # cursor_pos = None
-    # show_cursor = False
-    
-    # bm = None
-
     def __init__(self):
         self.dragging = False
         
         self.cursor_pos = None
         self.show_cursor = False
         
-#        self.bm = None
         self.history = []
         self.history_idx = -1
+        self.history_limit = 10
         
+    def free_snapshot(self, map):
+        for obj in map:
+            bm = map[obj]
+            bm.free()
 
     def history_snapshot(self, context):
         print("SNAPSHOT ")
@@ -274,6 +271,18 @@ class ModalDrawOperator(bpy.types.Operator):
                 mesh = obj.data
                 bm.from_mesh(mesh)
                 map[obj] = bm
+                
+        #Remove first element if history queue is maxed out
+        if self.history_idx == self.history_limit:
+            self.free_snapshot(self.history[0])
+            self.history.pop(0)
+        
+            self.history_idx += 1
+
+        #Remove all history past current pointer
+        while self.history_idx < len(self.history) - 1:
+            self.free_snapshot(self.history[-1])
+            self.history.pop()
                 
         self.history.append(map)
         self.history_idx += 1
@@ -326,9 +335,7 @@ class ModalDrawOperator(bpy.types.Operator):
         
     def history_clear(self, context):
         for map in self.history:
-            for obj in map:
-                bm = map[obj]
-                bm.free()
+            self.free_snapshot(map)
                 
         self.history = []
         
