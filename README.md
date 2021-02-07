@@ -27,6 +27,7 @@ If checked, your brush stroke will only affect faces facing the viewer.  Otherwi
 
 ##### Mode Buttons
 - **Fixed** - Brush stroke will paint all normals to point in a single direction.
+- **Comb** - Normals will point in the direction that you stroke the brush.
 - **Attract** - Normals will point toward origin of selected target object.
 - **Repel** - Normals will point away from origin of selected target object.
 - **Vertex** - Paint normals to reflect the underlying geometry.  This effectively 'erases' your tweaks.
