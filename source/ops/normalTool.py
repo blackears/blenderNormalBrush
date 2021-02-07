@@ -31,6 +31,7 @@ class NormalToolSettings(bpy.types.PropertyGroup):
     brush_type : bpy.props.EnumProperty(
         items=(
             ('FIXED', "Fixed", "Normals are in a fixed direction"),
+            ('COMB', "Comb", "Normals point in the direction that the brush moves"),
             ('ATTRACT', "Attract", "Normals point toward target object"),
             ('REPEL', "Repel", "Normals point away from target object"),
             ('VERTEX', "Vertex", "Get normal values from mesh vertices")
@@ -188,16 +189,19 @@ def draw_callback(self, context):
 
 
         #Brush normal direction
-        gpu.matrix.push()
-        
+        brush_type = context.scene.normal_brush_props.brush_type
         brush_normal = context.scene.normal_brush_props.normal
-        m = calc_vertex_transform_world(self.cursor_pos, brush_normal);
-        gpu.matrix.multiply_matrix(m)
-
-        shader.uniform_float("color", (0, 1, 1, 1))
-        batchLine.draw(shader)
         
-        gpu.matrix.pop()
+        if brush_type == "FIXED":
+            gpu.matrix.push()
+            
+            m = calc_vertex_transform_world(self.cursor_pos, brush_normal);
+            gpu.matrix.multiply_matrix(m)
+
+            shader.uniform_float("color", (0, 1, 1, 1))
+            batchLine.draw(shader)
+            
+            gpu.matrix.pop()
 
     
     #Draw editable normals
@@ -255,6 +259,8 @@ class ModalDrawOperator(bpy.types.Operator):
         self.history = []
         self.history_idx = -1
         self.history_limit = 10
+        self.stroke_trail = []
+        self.initial_mesh = None
         
     def free_snapshot(self, map):
         for obj in map:
@@ -341,6 +347,7 @@ class ModalDrawOperator(bpy.types.Operator):
         
 
     def dab_brush(self, context, event):
+#        print("dab_brush")
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         
         targetObj = context.scene.normal_brush_props.target
@@ -407,6 +414,8 @@ class ModalDrawOperator(bpy.types.Operator):
                             w2ln = obj.matrix_world.copy()
                             w2ln.transpose()
                             
+#                            print("Brush type %s" % (str(brush_type)))
+                            
                             nLocal = None
                             if brush_type == "FIXED":
                                 nLocal = brush_normal.to_4d()
@@ -414,6 +423,15 @@ class ModalDrawOperator(bpy.types.Operator):
                                 nLocal = w2ln @ nLocal
                                 nLocal = nLocal.to_3d()
                                 nLocal.normalize()
+                            elif brush_type == "COMB":
+#                                print("comb stroke_trail %s" %(str(self.stroke_trail)))
+                                if len(self.stroke_trail) > 1:
+                                    dir = self.stroke_trail[-1] - self.stroke_trail[-2]
+#                                    print("comb dir %s" %(str(dir)))
+                                    if dir.dot(dir) > .0001:
+                                        nLocal = w2ln @ dir
+                                        nLocal.normalize()
+                                pass
                             elif brush_type == "ATTRACT":
                                 if target != None:
                                     m = obj.matrix_world.copy()
@@ -479,9 +497,16 @@ class ModalDrawOperator(bpy.types.Operator):
                         
                     mesh.normals_split_custom_set(normals)
 
+            self.stroke_trail.append(location)
+            
+        else:
+            self.stroke_trail = []
+        
 
     def mouse_move(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
+
+#        print("mouse_move")
 
         ctx = bpy.context
 
@@ -525,12 +550,14 @@ class ModalDrawOperator(bpy.types.Operator):
             if result == False or object.select_get() == False:
                 return {'PASS_THROUGH'}
                             
-#            print ("m DOWN")
+            print ("m DOWN")
             self.dragging = True
+            self.stroke_trail = []
+            
             self.dab_brush(context, event)
             
         elif event.value == "RELEASE":
-#            print ("m UP")
+            print ("m UP")
             self.dragging = False
             self.history_snapshot(context)
 
@@ -699,6 +726,9 @@ class NormalPickerOperator(bpy.types.Operator):
             
             context.window.cursor_set("EYEDROPPER")
             self.picking = True
+            
+            
+            
             return {'RUNNING_MODAL'}
         else:
             self.report({'WARNING'}, "View3D not found, cannot run operator")
