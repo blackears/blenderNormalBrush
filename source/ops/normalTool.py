@@ -64,7 +64,6 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         description="Direction of normal in Fixed mode", 
         default = (1, 0, 0), 
         subtype="DIRECTION"
-#        update=normal_update
     )
     
     normal_exact : bpy.props.BoolProperty(
@@ -103,14 +102,10 @@ def calc_vertex_transform_world(pos, norm):
     angle = -math.acos(norm.dot(vecZ))
     
     quat = mathutils.Quaternion(axis, angle)
-#                    print (quat)
     mR = quat.to_matrix()
-#                    print (mR)
     mR.resize_4x4()
-#                    print (mR)
     
     mT = mathutils.Matrix.Translation(pos)
-#                    print (mT)
 
     m = mT @ mR
     return m
@@ -179,8 +174,6 @@ def draw_callback(self, context):
         gpu.matrix.push()
         
         gpu.matrix.multiply_matrix(m)
-#        shader.uniform_float("color", (1, 0, 1, 1))
-#        batchLine.draw(shader)
 
         shader.uniform_float("color", (1, 0, 1, 1))
         batchCircle.draw(shader)
@@ -222,8 +215,6 @@ def draw_callback(self, context):
             mesh.calc_normals_split()
             
             for l in mesh.loops:
-
-#                if not (selOnly and not v.select):
                     
                 v = mesh.vertices[l.vertex_index]
                 m = calc_vertex_transform(obj, v.co, l.normal)
@@ -260,7 +251,6 @@ class ModalDrawOperator(bpy.types.Operator):
         self.history_idx = -1
         self.history_limit = 10
         self.stroke_trail = []
-        self.initial_mesh = None
         
     def free_snapshot(self, map):
         for obj in map:
@@ -268,7 +258,6 @@ class ModalDrawOperator(bpy.types.Operator):
             bm.free()
 
     def history_snapshot(self, context):
-#        print("SNAPSHOT ")
         map = {}
         for obj in context.selected_objects:
             if obj.type == 'MESH':
@@ -292,48 +281,31 @@ class ModalDrawOperator(bpy.types.Operator):
                 
         self.history.append(map)
         self.history_idx += 1
-
-#        print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
         
     def history_undo(self, context):
- #       print("UNDO history_idx " + str(self.history_idx))
-    
         if (self.history_idx == 0):
             return
             
-        self.history_idx -= 1
-#        print("history_idx changed to " + str(self.history_idx))
-#        print("history " + str(self.history))
-        #print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
-       
-        map = self.history[self.history_idx]
-        
-        for obj in context.selected_objects:
-            if obj.type == 'MESH':
-                bm = map[obj]
-#                print("Found obj " + obj.name + " " + str(bm))
-                
-                mesh = obj.data
-                bm.to_mesh(mesh)
-                mesh.update()
+        self.history_undo_to_snapshot(context, self.history_idx - 1)
                 
     def history_redo(self, context):
-  #      print("REDO history_idx " + str(self.history_idx))
-    
         if (self.history_idx == len(self.history) - 1):
             return
+
+        self.history_undo_to_snapshot(context, self.history_idx + 1)
             
-        self.history_idx += 1
-#        print("history_idx changed to " + str(self.history_idx))
-#        print("history " + str(self.history))
-        #print("history len " + str(len(self.history)) + "  history_idx " + str(self.history_idx))
+        
+    def history_undo_to_snapshot(self, context, idx):
+        if idx < 0 or idx >= len(self.history):
+            return
+            
+        self.history_idx = idx
        
         map = self.history[self.history_idx]
         
         for obj in context.selected_objects:
             if obj.type == 'MESH':
                 bm = map[obj]
-#                print("Found obj " + obj.name + " " + str(bm))
                 
                 mesh = obj.data
                 bm.to_mesh(mesh)
@@ -344,31 +316,24 @@ class ModalDrawOperator(bpy.types.Operator):
             self.free_snapshot(map)
                 
         self.history = []
+        self.history_idx = -1
         
 
     def dab_brush(self, context, event):
-#        print("dab_brush")
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
         
         targetObj = context.scene.normal_brush_props.target
-#        if targetObj != None:
-#            print("^^^Tool property target: " + targetObj.name)
-#        else:
-#            print("^^^Tool property target: None")
 
         ctx = bpy.context
 
         region = context.region
         rv3d = context.region_data
-    #    coord = event.mouse_region_x, event.mouse_region_y
 
-#        viewport_center = (region.x + region.width / 2, region.y + region.height / 2)
         view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, mouse_pos)
         ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
 
         viewlayer = bpy.context.view_layer
         result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
-#        print("location " + str(location))
         
         center = None
         center_count = 0
@@ -387,34 +352,24 @@ class ModalDrawOperator(bpy.types.Operator):
         
             for obj in ctx.selected_objects:
                 if obj.type == 'MESH':
-    #                print("Updating mesh " + obj.name)
                     mesh = obj.data
                     mesh.use_auto_smooth = True
                     
                     mesh.calc_normals_split()
                     
-#                    print("num mesh loops: " + str(len(mesh.loops))
                     normals = []
                     
                     for p in mesh.polygons:
                         for loop_idx in p.loop_indices:
                             l = mesh.loops[loop_idx]
-    #                        normals.append(brush_normal)
                             
                             v = mesh.vertices[l.vertex_index]
                             pos = mathutils.Vector(v.co)
                             wpos = obj.matrix_world @ pos
 
-    #                        print ("---")
-    #                        print ("mtx wrld " + str(obj.matrix_world))
-    #                        print ("pos " + str(pos))
-    #                        print ("wpos " + str(wpos))
-
                             #Normal transform is (l2w ^ -1) ^ -1 ^ T
                             w2ln = obj.matrix_world.copy()
                             w2ln.transpose()
-                            
-#                            print("Brush type %s" % (str(brush_type)))
                             
                             nLocal = None
                             if brush_type == "FIXED":
@@ -423,15 +378,14 @@ class ModalDrawOperator(bpy.types.Operator):
                                 nLocal = w2ln @ nLocal
                                 nLocal = nLocal.to_3d()
                                 nLocal.normalize()
+
                             elif brush_type == "COMB":
-#                                print("comb stroke_trail %s" %(str(self.stroke_trail)))
                                 if len(self.stroke_trail) > 1:
                                     dir = self.stroke_trail[-1] - self.stroke_trail[-2]
-#                                    print("comb dir %s" %(str(dir)))
                                     if dir.dot(dir) > .0001:
                                         nLocal = w2ln @ dir
                                         nLocal.normalize()
-                                pass
+
                             elif brush_type == "ATTRACT":
                                 if target != None:
                                     m = obj.matrix_world.copy()
@@ -440,6 +394,7 @@ class ModalDrawOperator(bpy.types.Operator):
                                     
                                     nLocal = targetLoc - pos
                                     nLocal.normalize()
+
                             elif brush_type == "REPEL":
                                 if target != None:
                                     m = obj.matrix_world.copy()
@@ -449,40 +404,22 @@ class ModalDrawOperator(bpy.types.Operator):
                                     nLocal = pos - targetLoc
                                     nLocal.normalize()
                                     
-    #                                print("Setting nLocal")
-                                
-    #                                nLocal = mathutils.Vector(v.normal)
                             elif brush_type == "VERTEX":
                                 nLocal = mathutils.Vector(v.normal)
-    #                        print("brush norm local " + str(nLocal))
-                            
-    #                        print("l2w " + str(obj.matrix_world))
-    #                        print("w2ln " + str(w2ln))
-                            
-    #                        print("nLocal " + str(nLocal))                        
                             
                             
                             offset = location - wpos
-    #                        print ("offset " + str(offset))
-                            
-    #                        offset.length_squared / radius * radius
                             t = 1 - offset.length / radius
-    #                        print ("t " + str(t))
     
                             view_local = w2ln @ view_vector
-#                            if p.normal.dot(view_local) < 0 && front_faces_only:
-#                                pass
                             
                             
-    #                        print("loop norm " + str(l.normal))
                             if t <= 0 or nLocal == None or (p.normal.dot(view_local) > 0 and front_faces_only):
                                 normals.append(l.normal)
                             else:
                                 axis = l.normal.cross(nLocal)
                                 angle = nLocal.angle(l.normal)
                                 
-    #                            print("->axis " + str(axis))
-    #                            print("->angle " + str(math.degrees(angle)))
                                 atten = strength
                                 if use_pressure:
                                     atten *= event.pressure
@@ -491,7 +428,6 @@ class ModalDrawOperator(bpy.types.Operator):
                                 m = q.to_matrix()
                                 
                                 newNorm = m @ l.normal
-    #                            print("->new norm " + str(newNorm))
                                 
                                 normals.append(newNorm)
                         
@@ -505,8 +441,6 @@ class ModalDrawOperator(bpy.types.Operator):
 
     def mouse_move(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
-
-#        print("mouse_move")
 
         ctx = bpy.context
 
@@ -529,7 +463,6 @@ class ModalDrawOperator(bpy.types.Operator):
         else:
             self.show_cursor = False
 
-#        print ("dragging: " + str(self.dragging));            
         if self.dragging:
             self.dab_brush(context, event)
 
@@ -550,14 +483,12 @@ class ModalDrawOperator(bpy.types.Operator):
             if result == False or object.select_get() == False:
                 return {'PASS_THROUGH'}
                             
-            print ("m DOWN")
             self.dragging = True
             self.stroke_trail = []
             
             self.dab_brush(context, event)
             
         elif event.value == "RELEASE":
-            print ("m UP")
             self.dragging = False
             self.history_snapshot(context)
 
@@ -567,14 +498,6 @@ class ModalDrawOperator(bpy.types.Operator):
 
     def modal(self, context, event):
 
-        #We are not receiving a mouse up event after editing the normal,
-        # so check for it here
-#        print ("modal normal_changed: " + str(context.scene.normal_brush_props.normal_changed))   
-#        if context.scene.normal_brush_props.normal_changed:
-#            print ("reactng to normal chagne!!!: ")   
-#            self.dragging = False
-#            context.scene.normal_brush_props.normal_changed = False;
-#            
         context.area.tag_redraw()
 
         if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
@@ -582,7 +505,6 @@ class ModalDrawOperator(bpy.types.Operator):
             return {'PASS_THROUGH'}
 
         elif event.type == 'MOUSEMOVE':
-#            print("event " + str(dir(event)))
             self.mouse_move(context, event)
             
             if self.dragging:
@@ -592,19 +514,15 @@ class ModalDrawOperator(bpy.types.Operator):
             
         elif event.type == 'LEFTMOUSE':
             return self.mouse_down(context, event)
-#            return {'PASS_THROUGH'}
-#            return {'RUNNING_MODAL'}
 
         elif event.type in {'Z'}:
             if event.ctrl:
                 if event.shift:
                     if event.value == "RELEASE":
-    #                    print("SHIFT-Z");
                         self.history_redo(context)
                     return {'RUNNING_MODAL'}
                 else:
                     if event.value == "RELEASE":
-    #                    print("CTRL-Z");
                         self.history_undo(context)
 
                     return {'RUNNING_MODAL'}
@@ -635,12 +553,12 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             if event.value == 'RELEASE':
                 bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                self.history_undo_to_snapshot(context, 0)
                 self.history_clear(context)            
                 return {'CANCELLED'}
             return {'RUNNING_MODAL'}
 
         return {'PASS_THROUGH'}
-#        return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
         if context.area.type == 'VIEW_3D':
@@ -728,7 +646,6 @@ class NormalPickerOperator(bpy.types.Operator):
             self.picking = True
             
             
-            
             return {'RUNNING_MODAL'}
         else:
             self.report({'WARNING'}, "View3D not found, cannot run operator")
@@ -756,42 +673,12 @@ class NormalToolPanel(bpy.types.Panel):
 #---------------------------
 
 
-#class NormalToolTool(bpy.types.WorkSpaceTool):
-#    bl_space_type = 'VIEW_3D'
-#    bl_context_mode = 'OBJECT'
-
-#    # The prefix of the idname should be your add-on name.
-#    bl_idname = "kitfox.normal_tool_tool"
-#    bl_label = "Normal Tool"
-#    bl_description = (
-#        "Adjust the normals of the selected object"
-#    )
-#    bl_icon = "ops.generic.select_circle"
-#    bl_widget = None
-##    bl_keymap = (
-##        ("view3d.select_circle", {"type": 'LEFTMOUSE', "value": 'PRESS'},
-##         {"properties": [("wait_for_input", False)]}),
-##        ("view3d.select_circle", {"type": 'LEFTMOUSE', "value": 'PRESS', "ctrl": True},
-##         {"properties": [("mode", 'SUB'), ("wait_for_input", False)]}),
-##    )
-#    bl_keymap = (
-#        ("kitfox.normal_tool", {"type": 'LEFTMOUSE', "value": 'PRESS'},
-#         {"properties": [("wait_for_input", False)]}),
-#    )
-
-#    def draw_settings(context, layout, tool):
-#        props = tool.operator_properties("kitfox.normal_tool")
-##        layout.prop(props, "mode")
-#        
-#---------------------------
-
 class NormalToolPropsPanel(bpy.types.Panel):
 
     """Properties Panel for the Normal Tool on tool shelf"""
     bl_label = "Normal Brush"
     bl_idname = "OBJECT_PT_normal_tool_props"
     bl_space_type = 'VIEW_3D'
-#    bl_region_type = 'TOOL_PROPS'
     bl_region_type = 'UI'
     bl_context = "objectmode"
     bl_category = "Kitfox"
@@ -815,13 +702,11 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col.prop(settings, "normal_length")
         col.prop(settings, "radius")
         col.prop(settings, "front_faces_only")
-#        col.prop(settings, "selected_only")
 
         row = layout.row();
         row.prop(settings, "brush_type", expand = True)
 
         col = layout.column();
-#                    context.scene.normal_brush_props.normal = normal
         brush_type = context.scene.normal_brush_props.brush_type
 
         if brush_type == "FIXED":
@@ -835,8 +720,6 @@ class NormalToolPropsPanel(bpy.types.Panel):
             
         elif brush_type == "ATTRACT" or brush_type == "REPEL":
             col.prop(settings, "target")
-            
-#        layout.separator()
         
 
 #---------------------------
@@ -848,9 +731,7 @@ def register():
     bpy.utils.register_class(NormalToolSettings)
     bpy.utils.register_class(NormalPickerOperator)
     bpy.utils.register_class(ModalDrawOperator)
-#    bpy.utils.register_class(NormalToolPanel)
     bpy.utils.register_class(NormalToolPropsPanel)
-#    bpy.utils.register_tool(NormalToolTool)
 
     bpy.types.Scene.normal_brush_props = bpy.props.PointerProperty(type=NormalToolSettings)
 
@@ -872,9 +753,7 @@ def unregister():
     bpy.utils.unregister_class(NormalToolSettings)
     bpy.utils.unregister_class(NormalPickerOperator)
     bpy.utils.unregister_class(ModalDrawOperator)
-#    bpy.utils.unregister_class(NormalToolPanel)
     bpy.utils.unregister_class(NormalToolPropsPanel)
-#    bpy.utils.unregister_tool(NormalToolTool)
 
     del bpy.types.Scene.normal_brush_props
     
