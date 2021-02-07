@@ -41,6 +41,9 @@ In **Attract** and **Repel** modes, indicates the target objects that normals wi
 ##### Undo/Redo
 While the tool is running, you can use **CTRL-Z** to undo your most recent brush stroke and **CTRL-SHIFT-Z** to redo it.  The history is limited to 10 strokes.  Once you press **Enter** to finish editing normals, all your changes are added to Blender's undo queue as a group and you can no longer undo individual strokes.
 
+##### Cancelling
+Pressing **Esc** or **Right Mouse Click** will cancel your editing, discarding all changes.
+
 ### Fix Seam Normals Tool
 
 Also included under the **Fix Seam Normals** menu is a control to automatically copy normals across seams.  Simply select two or more objects with edges that meet.  Then press the **Copy Seam Normals** button.  The normals from the active object will be copied to the other selected objects wherever the selected object' vertex is snapped to the same spot as the active object's vertex.
