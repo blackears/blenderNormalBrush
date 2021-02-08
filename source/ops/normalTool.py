@@ -26,6 +26,12 @@ import bmesh
 from gpu_extras.batch import batch_for_shader
 from bpy_extras import view3d_utils
 
+def ray_cast(context, viewlayer, ray_origin, view_vector):
+    if bpy.app.version >= (2, 91, 0):
+        return context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+    else:
+        return context.scene.ray_cast(viewlayer, ray_origin, view_vector)
+
 
 class NormalToolSettings(bpy.types.PropertyGroup):
     brush_type : bpy.props.EnumProperty(
@@ -333,7 +339,8 @@ class ModalDrawOperator(bpy.types.Operator):
         ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
 
         viewlayer = bpy.context.view_layer
-        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+        result, location, normal, index, object, matrix = ray_cast(context, viewlayer, ray_origin, view_vector)
+#        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
         
         center = None
         center_count = 0
@@ -451,7 +458,8 @@ class ModalDrawOperator(bpy.types.Operator):
         ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
 
         viewlayer = bpy.context.view_layer
-        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+#        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+        result, location, normal, index, object, matrix = ray_cast(context, viewlayer, ray_origin, view_vector)
         
         #Brush cursor display
         if result:
@@ -478,7 +486,7 @@ class ModalDrawOperator(bpy.types.Operator):
             ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
 
             viewlayer = bpy.context.view_layer
-            result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+            result, location, normal, index, object, matrix = ray_cast(context, viewlayer, ray_origin, view_vector)
 
             if result == False or object.select_get() == False:
                 return {'PASS_THROUGH'}
@@ -600,7 +608,7 @@ class NormalPickerOperator(bpy.types.Operator):
 
 
         viewlayer = bpy.context.view_layer
-        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
+        result, location, normal, index, object, matrix = ray_cast(context, viewlayer, ray_origin, view_vector)
         
         if result:
             context.scene.normal_brush_props.normal = normal
