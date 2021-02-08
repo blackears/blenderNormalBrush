@@ -95,6 +95,10 @@ coordsNormal = [(0, 0, 0), (0, 0, 1)]
 vecZ = mathutils.Vector((0, 0, 1))
 vecX = mathutils.Vector((1, 0, 0))
 
+shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+batchLine = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
+batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
+
 
 #Find matrix that will rotate Z axis to point along normal
 #coord - point in world space
@@ -160,9 +164,9 @@ def draw_callback(self, context):
     ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, viewport_center)
 
 
-    shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-    batchLine = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
-    batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
+    # shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+    # batchLine = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
+    # batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
 
     shader.bind();
 
@@ -256,6 +260,8 @@ class ModalDrawOperator(bpy.types.Operator):
         self.history = []
         self.history_idx = -1
         self.history_limit = 10
+        self.history_bookmarks = {}
+        
         self.stroke_trail = []
         
     def free_snapshot(self, map):
@@ -263,7 +269,8 @@ class ModalDrawOperator(bpy.types.Operator):
             bm = map[obj]
             bm.free()
 
-    def history_snapshot(self, context):
+    #if bookmark is other than -1, snapshot added to bookmark library rather than undo stack
+    def history_snapshot(self, context, bookmark = -1):
         map = {}
         for obj in context.selected_objects:
             if obj.type == 'MESH':
@@ -273,20 +280,24 @@ class ModalDrawOperator(bpy.types.Operator):
                 bm.from_mesh(mesh)
                 map[obj] = bm
                 
-        #Remove first element if history queue is maxed out
-        if self.history_idx == self.history_limit:
-            self.free_snapshot(self.history[0])
-            self.history.pop(0)
-        
-            self.history_idx += 1
-
-        #Remove all history past current pointer
-        while self.history_idx < len(self.history) - 1:
-            self.free_snapshot(self.history[-1])
-            self.history.pop()
+        if bookmark != -1:
+            self.history_bookmarks[bookmark] = map
                 
-        self.history.append(map)
-        self.history_idx += 1
+        else:
+            #Remove first element if history queue is maxed out
+            if self.history_idx == self.history_limit:
+                self.free_snapshot(self.history[0])
+                self.history.pop(0)
+            
+                self.history_idx += 1
+
+            #Remove all history past current pointer
+            while self.history_idx < len(self.history) - 1:
+                self.free_snapshot(self.history[-1])
+                self.history.pop()
+                    
+            self.history.append(map)
+            self.history_idx += 1
         
     def history_undo(self, context):
         if (self.history_idx == 0):
@@ -300,6 +311,17 @@ class ModalDrawOperator(bpy.types.Operator):
 
         self.history_undo_to_snapshot(context, self.history_idx + 1)
             
+        
+    def history_restore_bookmark(self, context, bookmark):
+        map = self.history[bookmark]
+    
+        for obj in context.selected_objects:
+            if obj.type == 'MESH':
+                bm = map[obj]
+                
+                mesh = obj.data
+                bm.to_mesh(mesh)
+                mesh.update()
         
     def history_undo_to_snapshot(self, context, idx):
         if idx < 0 or idx >= len(self.history):
@@ -318,6 +340,10 @@ class ModalDrawOperator(bpy.types.Operator):
                 mesh.update()
         
     def history_clear(self, context):
+        for key in self.history_bookmarks:
+            map = self.history_bookmarks[key]
+            self.free_snapshot(map)
+    
         for map in self.history:
             self.free_snapshot(map)
                 
@@ -561,7 +587,7 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             if event.value == 'RELEASE':
                 bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
-                self.history_undo_to_snapshot(context, 0)
+                self.history_restore_bookmark(context, 0)
                 self.history_clear(context)            
                 return {'CANCELLED'}
             return {'RUNNING_MODAL'}
@@ -580,6 +606,7 @@ class ModalDrawOperator(bpy.types.Operator):
             context.area.tag_redraw()
             self.history_clear(context)
             self.history_snapshot(context)
+            self.history_snapshot(context, 0)
 
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
