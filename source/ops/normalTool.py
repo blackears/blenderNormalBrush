@@ -75,13 +75,24 @@ class NormalToolSettings(bpy.types.PropertyGroup):
     normal_exact : bpy.props.BoolProperty(
         name="Exact normal", description="Display normal as exact coordinates", default = True
     )
-
     
     front_faces_only : bpy.props.BoolProperty(
         name="Front Faces Only", description="Only affect normals on front facing faces", default = True
     )
 
     target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
+    
+    symmetry_x : bpy.props.BoolProperty(
+        name="X", description="Symmetry across the X axis", default = False
+    )
+    
+    symmetry_y : bpy.props.BoolProperty(
+        name="Y", description="Symmetry across the Y axis", default = False
+    )
+    
+    symmetry_z : bpy.props.BoolProperty(
+        name="Z", description="Symmetry across the Z axis", default = False
+    )
     
 
 #---------------------------
@@ -366,7 +377,6 @@ class ModalDrawOperator(bpy.types.Operator):
 
         viewlayer = bpy.context.view_layer
         result, location, normal, index, object, matrix = ray_cast(context, viewlayer, ray_origin, view_vector)
-#        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
         
         center = None
         center_count = 0
@@ -379,6 +389,9 @@ class ModalDrawOperator(bpy.types.Operator):
         brush_normal = context.scene.normal_brush_props.normal
         target = context.scene.normal_brush_props.target
         front_faces_only = context.scene.normal_brush_props.front_faces_only
+        sym_x = context.scene.normal_brush_props.symmetry_x
+        sym_y = context.scene.normal_brush_props.symmetry_y
+        sym_z = context.scene.normal_brush_props.symmetry_z
         
 
         if result:
@@ -441,28 +454,65 @@ class ModalDrawOperator(bpy.types.Operator):
                                 nLocal = mathutils.Vector(v.normal)
                             
                             
-                            offset = location - wpos
-                            t = 1 - offset.length / radius
-    
-                            view_local = w2ln @ view_vector
+                            #Apply transform to vertex
+                            offsets = [location]
+                            norms = [nLocal]
                             
+#                            print("checking symmetry")
                             
-                            if t <= 0 or nLocal == None or (p.normal.dot(view_local) > 0 and front_faces_only):
+                            if sym_x:
+                                offsets = offsets + [mathutils.Vector((-p.x, p.y, p.z)) for p in offsets]
+                                norms = norms + [None if p == None else mathutils.Vector((-p.x, p.y, p.z)) for p in norms]
+                            
+                            if sym_y:
+                                offsets = offsets + [mathutils.Vector((p.x, -p.y, p.z)) for p in offsets]
+                                norms = norms + [None if p == None else mathutils.Vector((p.x, -p.y, p.z)) for p in norms]
+                            
+                            if sym_z:
+                                offsets = offsets + [mathutils.Vector((p.x, p.y, -p.z)) for p in offsets]
+                                norms = norms + [None if p == None else mathutils.Vector((p.x, p.y, -p.z)) for p in norms]
+                            
+#                            print("locs %s" % str(offsets))
+                            
+                            rot_to = []
+                            
+                            for loc, norm in zip(offsets, norms):
+                            
+                                offset = loc - wpos
+                                t = 1 - offset.length / radius
+        
+                                view_local = w2ln @ view_vector
+                                
+                                if t <= 0 or norm == None or (p.normal.dot(view_local) > 0 and front_faces_only):
+                                    pass
+                                else:
+                                    axis = l.normal.cross(norm)
+                                    angle = norm.angle(l.normal)
+                                    
+                                    atten = strength
+                                    if use_pressure:
+                                        atten *= event.pressure
+                                    
+                                    q = mathutils.Quaternion(axis, angle * t * atten)
+                                    m = q.to_matrix()
+                                    
+                                    newNorm = m @ l.normal
+                                    
+                                    rot_to.append(newNorm)
+                                    
+#                                    normals.append(newNorm)
+
+                            if len(rot_to) == 0:
                                 normals.append(l.normal)
+                            elif len(rot_to) == 1:
+                                normals.append(rot_to[0])
                             else:
-                                axis = l.normal.cross(nLocal)
-                                angle = nLocal.angle(l.normal)
+                                merged_norm = mathutils.Vector(rot_to[0])
+                                for v in rot_to[1:]:
+                                    merged_norm = merged_norm + v
+                                merged_norm.normalize()
+                                normals.append(merged_norm)
                                 
-                                atten = strength
-                                if use_pressure:
-                                    atten *= event.pressure
-                                
-                                q = mathutils.Quaternion(axis, angle * t * atten)
-                                m = q.to_matrix()
-                                
-                                newNorm = m @ l.normal
-                                
-                                normals.append(newNorm)
                         
                     mesh.normals_split_custom_set(normals)
 
@@ -484,7 +534,6 @@ class ModalDrawOperator(bpy.types.Operator):
         ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, mouse_pos)
 
         viewlayer = bpy.context.view_layer
-#        result, location, normal, index, object, matrix = context.scene.ray_cast(viewlayer.depsgraph, ray_origin, view_vector)
         result, location, normal, index, object, matrix = ray_cast(context, viewlayer, ray_origin, view_vector)
         
         #Brush cursor display
@@ -744,7 +793,14 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col = layout.column();
         brush_type = context.scene.normal_brush_props.brush_type
 
+        col.label(text="Symmetry:")
+        row = layout.row();
+        row.prop(settings, "symmetry_x", text = "X")
+        row.prop(settings, "symmetry_y", text = "Y")
+        row.prop(settings, "symmetry_z", text = "Z")
+
         if brush_type == "FIXED":
+            col = layout.column();
             if not context.scene.normal_brush_props.normal_exact:
                 col.label(text="Normal:")
                 col.prop(settings, "normal", text="")
@@ -754,6 +810,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
             col.operator("kitfox.nt_pick_normal", icon="EYEDROPPER")
             
         elif brush_type == "ATTRACT" or brush_type == "REPEL":
+            col = layout.column();
             col.prop(settings, "target")
         
 
