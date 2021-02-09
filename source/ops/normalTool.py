@@ -454,11 +454,9 @@ class ModalDrawOperator(bpy.types.Operator):
                                 nLocal = mathutils.Vector(v.normal)
                             
                             
-                            #Apply transform to vertex
+                            #Calc new normals (one for each symmetry direction)
                             offsets = [location]
                             norms = [nLocal]
-                            
-#                            print("checking symmetry")
                             
                             if sym_x:
                                 offsets = offsets + [mathutils.Vector((-p.x, p.y, p.z)) for p in offsets]
@@ -472,7 +470,6 @@ class ModalDrawOperator(bpy.types.Operator):
                                 offsets = offsets + [mathutils.Vector((p.x, p.y, -p.z)) for p in offsets]
                                 norms = norms + [None if p == None else mathutils.Vector((p.x, p.y, -p.z)) for p in norms]
                             
-#                            print("locs %s" % str(offsets))
                             
                             rot_to = []
                             
@@ -500,8 +497,7 @@ class ModalDrawOperator(bpy.types.Operator):
                                     
                                     rot_to.append(newNorm)
                                     
-#                                    normals.append(newNorm)
-
+                            #Apply average new normal to mesh
                             if len(rot_to) == 0:
                                 normals.append(l.normal)
                             elif len(rot_to) == 1:
