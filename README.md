@@ -26,7 +26,7 @@ Radius of the normal brush.  You can also press the *[* and *]* keys to change t
 If checked, your brush stroke will only affect faces facing the viewer.  Otherwise, all vertices within a sphere the size of the brush are affected.
 
 ##### Symmetry
-If checked, any tweak made on one part of the model will be mirrored across the model and also applied to that side.
+For each axis checked, any tweak made on one part of the model will also be mirrored across the axis.
 
 ##### Mode Buttons
 - **Fixed** - Brush stroke will paint all normals to point in a single direction.
