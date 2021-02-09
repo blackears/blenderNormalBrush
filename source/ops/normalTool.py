@@ -144,9 +144,7 @@ def calc_vertex_transform(obj, coord, normal):
     pos = obj.matrix_world @ coord
 
     #Transform normal into world space
-    norm = normal.copy()
-    norm.resize_4d()
-    norm.w = 0
+    norm = mathutils.Vector((normal.x, normal.y, normal.z, 0))
     mIT = obj.matrix_world.copy()
     mIT.invert()
     mIT.transpose()
@@ -180,10 +178,6 @@ def draw_callback(self, context):
     view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, viewport_center)
     ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, viewport_center)
 
-
-    # shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-    # batchLine = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
-    # batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
 
     shader.bind();
 
@@ -227,8 +221,6 @@ def draw_callback(self, context):
     #Draw editable normals
     shader.uniform_float("color", (1, 1, 0, 1))
 
-
-    selOnly = context.scene.normal_brush_props.selected_only
 
     normLength = context.scene.normal_brush_props.normal_length
     mS = mathutils.Matrix.Scale(normLength, 4)
