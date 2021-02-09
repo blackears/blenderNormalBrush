@@ -33,6 +33,12 @@ def ray_cast(context, viewlayer, ray_origin, view_vector):
         return context.scene.ray_cast(viewlayer, ray_origin, view_vector)
 
 
+def redraw_all_viewports(context):
+    for area in bpy.context.screen.areas: # iterate through areas in current screen
+        if area.type == 'VIEW_3D':
+            area.tag_redraw()
+
+
 class NormalToolSettings(bpy.types.PropertyGroup):
     brush_type : bpy.props.EnumProperty(
         items=(
@@ -576,9 +582,8 @@ class ModalDrawOperator(bpy.types.Operator):
     
 
     def modal(self, context, event):
-
-        context.area.tag_redraw()
-
+        redraw_all_viewports(context)
+        
         if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
             # allow navigation
             return {'PASS_THROUGH'}
@@ -648,7 +653,7 @@ class ModalDrawOperator(bpy.types.Operator):
             self._context = context
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
-            context.area.tag_redraw()
+            redraw_all_viewports(context)
             self.history_clear(context)
             self.history_snapshot(context)
             self.history_snapshot(context, 0)
@@ -684,7 +689,7 @@ class NormalPickerOperator(bpy.types.Operator):
         
         if result:
             context.scene.normal_brush_props.normal = normal
-            context.area.tag_redraw()
+            redraw_all_viewports(context)
 
 
     def modal(self, context, event):
