@@ -455,28 +455,35 @@ class ModalDrawOperator(bpy.types.Operator):
                             #Calc new normals (one for each symmetry direction)
                             offsets = [location]
                             norms = [nLocal]
+                            view_vecs = [view_vector]
                             
                             if sym_x:
                                 offsets = offsets + [mathutils.Vector((-p.x, p.y, p.z)) for p in offsets]
                                 norms = norms + [None if p == None else mathutils.Vector((-p.x, p.y, p.z)) for p in norms]
+                                view_vecs = view_vecs + [None if p == None else mathutils.Vector((-p.x, p.y, p.z)) for p in view_vecs]
                             
                             if sym_y:
                                 offsets = offsets + [mathutils.Vector((p.x, -p.y, p.z)) for p in offsets]
                                 norms = norms + [None if p == None else mathutils.Vector((p.x, -p.y, p.z)) for p in norms]
+                                view_vecs = view_vecs + [None if p == None else mathutils.Vector((p.x, -p.y, p.z)) for p in view_vecs]
                             
                             if sym_z:
                                 offsets = offsets + [mathutils.Vector((p.x, p.y, -p.z)) for p in offsets]
                                 norms = norms + [None if p == None else mathutils.Vector((p.x, p.y, -p.z)) for p in norms]
+                                view_vecs = view_vecs + [None if p == None else mathutils.Vector((p.x, p.y, -p.z)) for p in view_vecs]
                             
                             
                             rot_to = []
                             
-                            for loc, norm in zip(offsets, norms):
+                            for loc, norm, view_vec in zip(offsets, norms, view_vecs):
                             
                                 offset = loc - wpos
                                 t = 1 - offset.length / radius
         
-                                view_local = w2ln @ view_vector
+                                vv = view_vec.to_4d()
+                                vv.w = 0
+                                view_local = w2ln @ vv
+                                view_local = view_local.to_3d()
                                 
                                 if t <= 0 or norm == None or (p.normal.dot(view_local) > 0 and front_faces_only):
                                     pass

@@ -17,7 +17,7 @@ bl_info = {
     "name": "Normals Brush",
     "description": "Provides a brush that lets you adjust normals.  Also a button for copying normals that lie along seams.",
     "author": "Mark McKay",
-    "version": (1, 1, 4),
+    "version": (1, 1, 5),
     "blender": (2, 80, 0),
     "location": "View3D",
 #    "wiki_url": "https://github.com/blackears/normalTool",
