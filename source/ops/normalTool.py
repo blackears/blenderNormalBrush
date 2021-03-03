@@ -598,19 +598,19 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':
             return self.mouse_down(context, event)
 
-        # elif event.type in {'Z'}:
-            # if event.ctrl:
-                # if event.shift:
-                    # if event.value == "RELEASE":
-                        # self.history_redo(context)
-                    # return {'RUNNING_MODAL'}
-                # else:
-                    # if event.value == "RELEASE":
-                        # self.history_undo(context)
+        elif event.type in {'Z'}:
+            if event.ctrl:
+                if event.shift:
+                    if event.value == "RELEASE":
+                        self.history_redo(context)
+                    return {'RUNNING_MODAL'}
+                else:
+                    if event.value == "RELEASE":
+                        self.history_undo(context)
 
-                    # return {'RUNNING_MODAL'}
+                    return {'RUNNING_MODAL'}
                 
-            # return {'RUNNING_MODAL'}
+            return {'RUNNING_MODAL'}
         
         elif event.type in {'RET'}:
             if event.value == 'RELEASE':
