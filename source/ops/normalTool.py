@@ -1,16 +1,17 @@
-#Copyright 2021 Mark McKay
+# This file is part of the Kitfox Normal Brush distribution (https://github.com/blackears/blenderNormalBrush).
+# Copyright (c) 2021 Mark McKay
+# 
+# This program is free software: you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation, version 3.
 #
-#Licensed under the Apache License, Version 2.0 (the "License");
-#you may not use this file except in compliance with the License.
-#You may obtain a copy of the License at
+# This program is distributed in the hope that it will be useful, but 
+# WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# General Public License for more details.
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-#Unless required by applicable law or agreed to in writing, software
-#distributed under the License is distributed on an "AS IS" BASIS,
-#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#See the License for the specific language governing permissions and
-#limitations under the License.
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
 import bpy
@@ -669,7 +670,10 @@ class NormalPickerOperator(bpy.types.Operator):
     """Pick normal"""
     bl_idname = "kitfox.nt_pick_normal"
     bl_label = "Pick Normal"
-    picking = False
+    bl_options = {"REGISTER", "UNDO"}
+    
+    def __init__(self):
+        self.picking = False
 
     def mouse_down(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
@@ -702,13 +706,13 @@ class NormalPickerOperator(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':
             self.picking = False
             self.mouse_down(context, event)
-            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             context.window.cursor_set("DEFAULT")
             return {'FINISHED'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             self.picking = False
-            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+#            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             print("pick target object cancelled")
             context.window.cursor_set("DEFAULT")
             return {'CANCELLED'}
@@ -717,12 +721,10 @@ class NormalPickerOperator(bpy.types.Operator):
 
     def invoke(self, context, event):
         if context.area.type == 'VIEW_3D':
+
             args = (self, context)
-            
-            # Add the region OpenGL drawing callback
-            # draw in view space with 'POST_VIEW' and 'PRE_VIEW'
             self._context = context
-            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
+#            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
             context.window_manager.modal_handler_add(self)
             
@@ -765,7 +767,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_context = "objectmode"
-    bl_category = "Kitfox"
+    bl_category = "Kitfox - Normal"
 
         
 

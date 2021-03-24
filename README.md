@@ -6,7 +6,7 @@ Once you install the tool, a new panel will be added to the 'N' menu on the righ
 
 ### Normal Brush Tool
 
-[![The Normal Brush Tool in action](doc/normalBrushInAction.png)
+![The Normal Brush Tool in action](doc/normalBrushInAction.png)
 
 The **Normal Brush** submenu contains controls for the brush.  To begin, select the object you want to adjust normals on and then click the **Start Normal Tool** button to activate the brush.  The normals of the object will then be shown overlaid on the mesh and you can click and drag with the brush to adjust them.
 
