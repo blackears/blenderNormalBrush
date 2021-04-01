@@ -1,4 +1,20 @@
 #!/usr/bin/env python
+
+# This file is part of the Kitfox Normal Brush distribution (https://github.com/blackears/blenderEasyFly).
+# Copyright (c) 2021 Mark McKay
+# 
+# This program is free software: you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but 
+# WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import shutil
 import sys
@@ -22,6 +38,8 @@ def copytree(src, dst):
             shutil.copy(s, d)
 
 def make(copyToBlenderAddons = False, createArchive = False):
+    projectName = 'normalBrush'
+    
     blenderHome = None
     platSys = platform.system()
     if platSys == 'Windows':
@@ -32,14 +50,15 @@ def make(copyToBlenderAddons = False, createArchive = False):
         home = os.getenv('HOME')
         blenderHome = os.path.join(home, ".config/blender/2.91/")
 
+
     #Create build directory
     curPath = os.getcwd()
     if os.path.exists('build'):
         shutil.rmtree('build')
     os.mkdir('build')
-    os.mkdir('build/normalBrush')
+    os.mkdir('build/' + projectName)
 
-    copytree("source", "build/normalBrush");
+    copytree("source", "build/" + projectName);
 
     
     #Build addon zip file
@@ -48,12 +67,12 @@ def make(copyToBlenderAddons = False, createArchive = False):
             shutil.rmtree('deploy')
         os.mkdir('deploy')
 
-        shutil.make_archive("deploy/normalBrush", "zip", "build")
+        shutil.make_archive("deploy/" + projectName, "zip", "build")
 
 
     if copyToBlenderAddons: 
         addonPath = os.path.join(blenderHome, "scripts/addons")
-        destPath = os.path.join(addonPath, "normalBrush")
+        destPath = os.path.join(addonPath, projectName)
 
         print("Copying to blender addons: " + addonPath)
         if os.path.exists(destPath):
