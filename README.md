@@ -26,7 +26,7 @@ Radius of the normal brush.  You can also press the *[* and *]* keys to change t
 If checked, your brush stroke will only affect faces facing the viewer.  Otherwise, all vertices within a sphere the size of the brush are affected.
 
 ##### Selected Faces Only
-If checked, your brush stroke will only affect faces faces that have been selected in edit mode.
+If checked, your brush stroke will only affect faces that have been selected in edit mode.  (The Normal Brush tool still operates in Object mode).
 
 ##### Symmetry
 For each axis checked, any tweak made on one part of the model will also be mirrored across the axis.
