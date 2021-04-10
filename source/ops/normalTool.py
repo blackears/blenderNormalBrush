@@ -68,8 +68,12 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         name="Normal Length", description="Display length of normal", default = 1, min=0, soft_max = 1
     )
 
-    selected_only : bpy.props.BoolProperty(
-        name="Selected Only", description="If true, affect only selected vertices", default = True
+    selected_verts_only : bpy.props.BoolProperty(
+        name="Selected Vertices Only", description="If true, affect only selected vertices", default = False
+    )
+
+    selected_faces_only : bpy.props.BoolProperty(
+        name="Selected Faces Only", description="If true, affect only selected faces", default = False
     )
 
     normal : bpy.props.FloatVectorProperty(
@@ -380,7 +384,8 @@ class ModalDrawOperator(bpy.types.Operator):
         center = None
         center_count = 0
 
-        selOnly = context.scene.normal_brush_props.selected_only
+        selVertsOnly = context.scene.normal_brush_props.selected_verts_only
+        selFacesOnly = context.scene.normal_brush_props.selected_faces_only
         radius = context.scene.normal_brush_props.radius
         strength = context.scene.normal_brush_props.strength
         use_pressure = context.scene.normal_brush_props.use_pressure
@@ -405,10 +410,21 @@ class ModalDrawOperator(bpy.types.Operator):
                     normals = []
                     
                     for p in mesh.polygons:
+                        masked = False
+                        if selFacesOnly and not p.select:
+                            masked = True
+                    
                         for loop_idx in p.loop_indices:
                             l = mesh.loops[loop_idx]
                             
                             v = mesh.vertices[l.vertex_index]
+                            if selVertsOnly and not v.select:
+                                masked = True
+
+#                            print("loop_idx " + str(loop_idx))
+#                            print("l.vertex_index " + str(l.vertex_index))
+#                            print("v.select " + str(v.select))
+                            
                             pos = mathutils.Vector(v.co)
                             wpos = obj.matrix_world @ pos
 
@@ -486,7 +502,7 @@ class ModalDrawOperator(bpy.types.Operator):
                                 view_local = w2ln @ vv
                                 view_local = view_local.to_3d()
                                 
-                                if t <= 0 or norm == None or (p.normal.dot(view_local) > 0 and front_faces_only):
+                                if t <= 0 or norm == None or (p.normal.dot(view_local) > 0 and front_faces_only) or masked:
                                     pass
                                 else:
                                     axis = l.normal.cross(norm)
@@ -788,6 +804,8 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col.prop(settings, "normal_length")
         col.prop(settings, "radius")
         col.prop(settings, "front_faces_only")
+        col.prop(settings, "selected_verts_only")
+        col.prop(settings, "selected_faces_only")
 
         row = layout.row();
         row.prop(settings, "brush_type", expand = True)
