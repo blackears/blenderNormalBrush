@@ -420,10 +420,6 @@ class ModalDrawOperator(bpy.types.Operator):
                             v = mesh.vertices[l.vertex_index]
                             if selVertsOnly and not v.select:
                                 masked = True
-
-#                            print("loop_idx " + str(loop_idx))
-#                            print("l.vertex_index " + str(l.vertex_index))
-#                            print("v.select " + str(v.select))
                             
                             pos = mathutils.Vector(v.co)
                             wpos = obj.matrix_world @ pos
@@ -740,7 +736,6 @@ class NormalPickerOperator(bpy.types.Operator):
 
             args = (self, context)
             self._context = context
-#            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
             context.window_manager.modal_handler_add(self)
             
@@ -755,25 +750,6 @@ class NormalPickerOperator(bpy.types.Operator):
 
 #---------------------------
 
-class NormalToolPanel(bpy.types.Panel):
-
-    """Panel for the Normal Tool on tool shelf"""
-    bl_label = "Normal Tool Panel"
-    bl_idname = "OBJECT_PT_normal_tool"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS'
-    bl_context = "objectmode"
-
-    def draw(self, context):
-        layout = self.layout
-
-        obj = context.object
-
-        row = layout.row()
-        row.operator("kitfox.normal_tool")
-
-#---------------------------
-
 
 class NormalToolPropsPanel(bpy.types.Panel):
 
@@ -782,10 +758,15 @@ class NormalToolPropsPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_normal_tool_props"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_context = "objectmode"
+#    bl_context = "objectmode"
     bl_category = "Kitfox - Normal"
 
-        
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        return obj != None and (obj.mode == 'OBJECT')
+#        return obj != None and (obj.mode == 'EDIT' or obj.mode == 'OBJECT')
 
     def draw(self, context):
         layout = self.layout
@@ -804,7 +785,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col.prop(settings, "normal_length")
         col.prop(settings, "radius")
         col.prop(settings, "front_faces_only")
-        col.prop(settings, "selected_verts_only")
+#        col.prop(settings, "selected_verts_only")
         col.prop(settings, "selected_faces_only")
 
         row = layout.row();
