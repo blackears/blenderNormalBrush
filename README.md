@@ -32,10 +32,11 @@ If checked, your brush stroke will only affect faces that have been selected in 
 For each axis checked, any tweak made on one part of the model will also be mirrored across the axis.
 
 ##### Mode Buttons
-- **Fixed** - Brush stroke will paint all normals to point in a single direction.
 - **Comb** - Normals will point in the direction that you stroke the brush.
+- **Fixed** - Brush stroke will paint all normals to point in a single direction.
 - **Attract** - Normals will point toward origin of selected target object.
 - **Repel** - Normals will point away from origin of selected target object.
+- **Smooth** - Average the values of the normals under the brush.
 - **Vertex** - Paint normals to reflect the underlying geometry.  This effectively 'erases' your tweaks.
 
 ##### Normal

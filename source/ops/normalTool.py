@@ -43,13 +43,14 @@ def redraw_all_viewports(context):
 class NormalToolSettings(bpy.types.PropertyGroup):
     brush_type : bpy.props.EnumProperty(
         items=(
-            ('FIXED', "Fixed", "Normals are in a fixed direction"),
             ('COMB', "Comb", "Normals point in the direction that the brush moves"),
+            ('FIXED', "Fixed", "Normals are in a fixed direction"),
             ('ATTRACT', "Attract", "Normals point toward target object"),
             ('REPEL', "Repel", "Normals point away from target object"),
+            ('SMOOTH', "Smooth", "Average the normal direction under the brush"),
             ('VERTEX', "Vertex", "Get normal values from mesh vertices")
         ),
-        default='FIXED'
+        default='COMB'
     )
     
     radius : bpy.props.FloatProperty(
@@ -406,6 +407,29 @@ class ModalDrawOperator(bpy.types.Operator):
                     mesh.use_auto_smooth = True
                     
                     mesh.calc_normals_split()
+
+                    #Calc normal for smoothing
+                    if brush_type == "SMOOTH":
+                        smooth_normal = None
+                        
+                        for p in mesh.polygons:
+                            for loop_idx in p.loop_indices:
+                                l = mesh.loops[loop_idx]
+                                v = mesh.vertices[l.vertex_index]
+                                pos = mathutils.Vector(v.co)
+                                wpos = obj.matrix_world @ pos
+
+                                offset = location - wpos
+                                if offset.length < radius:
+                                    weight = 1 - offset.length / radius
+                                    
+                                    if smooth_normal == None:
+                                        smooth_normal = l.normal * weight
+                                    else:
+                                        smooth_normal += l.normal * weight
+                                    
+                        if not smooth_normal == None:
+                            smooth_normal.normalize()
                     
                     normals = []
                     
@@ -460,6 +484,9 @@ class ModalDrawOperator(bpy.types.Operator):
                                     
                                     nLocal = pos - targetLoc
                                     nLocal.normalize()
+
+                            elif brush_type == "SMOOTH":
+                                nLocal = smooth_normal
                                     
                             elif brush_type == "VERTEX":
                                 nLocal = mathutils.Vector(v.normal)
@@ -788,8 +815,10 @@ class NormalToolPropsPanel(bpy.types.Panel):
 #        col.prop(settings, "selected_verts_only")
         col.prop(settings, "selected_faces_only")
 
-        row = layout.row();
-        row.prop(settings, "brush_type", expand = True)
+        col.label(text="Brush Type:")
+        col.prop(settings, "brush_type", expand = True)
+#        row = layout.col();
+#        row.prop(settings, "brush_type", expand = True)
 
         col = layout.column();
         brush_type = context.scene.normal_brush_props.brush_type
