@@ -54,56 +54,88 @@ class NormalToolSettings(bpy.types.PropertyGroup):
     )
     
     radius : bpy.props.FloatProperty(
-        name="Radius", description="Radius of brush", default = 1, min=0, soft_max = 4
+        name="Radius", 
+        description="Radius of brush", 
+        default = 1, 
+        min = 0, 
+        soft_max = 4
     )
     
     strength : bpy.props.FloatProperty(
-        name="Strength", description="Amount to adjust mesh normal", default = 1, min=0, max = 1
+        name="Strength", 
+        description="Amount to adjust mesh normal", 
+        default = 1, 
+        min = 0, 
+        max = 1
     )
 
     use_pressure : bpy.props.BoolProperty(
-        name="Pen Pressure", description="If true, pen pressure is used to adjust strength", default = True
+        name="Pen Pressure", 
+        description="If true, pen pressure is used to adjust strength", 
+        default = True
     )
     
     normal_length : bpy.props.FloatProperty(
-        name="Normal Length", description="Display length of normal", default = 1, min=0, soft_max = 1
+        name = "Normal Length", 
+        description="Display length of normal", 
+        default = 1, 
+        min=0, 
+        soft_max = 1
     )
 
     selected_verts_only : bpy.props.BoolProperty(
-        name="Selected Vertices Only", description="If true, affect only selected vertices", default = False
+        name = "Selected Vertices Only", 
+        description = "If true, affect only selected vertices", 
+        default = False
     )
 
     selected_faces_only : bpy.props.BoolProperty(
-        name="Selected Faces Only", description="If true, affect only selected faces", default = False
+        name = "Selected Faces Only", 
+        description = "If true, affect only selected faces", 
+        default = False
     )
 
     normal : bpy.props.FloatVectorProperty(
-        name="Normal", 
-        description="Direction of normal in Fixed mode", 
+        name = "Normal", 
+        description = "Direction of normal in Fixed mode", 
         default = (1, 0, 0), 
-        subtype="DIRECTION"
+        subtype = "DIRECTION"
     )
     
     normal_exact : bpy.props.BoolProperty(
-        name="Exact normal", description="Display normal as exact coordinates", default = True
+        name = "Exact normal", 
+        description = "Display normal as exact coordinates",
+        default = True
     )
     
     front_faces_only : bpy.props.BoolProperty(
-        name="Front Faces Only", description="Only affect normals on front facing faces", default = True
+        name = "Front Faces Only", 
+        description = "Only affect normals on front facing faces", 
+        default = True
     )
 
-    target : bpy.props.PointerProperty(name="Target", description="Object Attract and Repel mode reference", type=bpy.types.Object)
+    target : bpy.props.PointerProperty(
+        name = "Target", 
+        description = "Object Attract and Repel mode reference", 
+        type = bpy.types.Object
+    )
     
     symmetry_x : bpy.props.BoolProperty(
-        name="X", description="Symmetry across the X axis", default = False
+        name="X", 
+        description = "Symmetry across the X axis",
+        default = False
     )
     
     symmetry_y : bpy.props.BoolProperty(
-        name="Y", description="Symmetry across the Y axis", default = False
+        name = "Y", 
+        description = "Symmetry across the Y axis", 
+        default = False
     )
     
     symmetry_z : bpy.props.BoolProperty(
-        name="Z", description="Symmetry across the Z axis", default = False
+        name = "Z", 
+        description = "Symmetry across the Z axis", 
+        default = False
     )
     
 
