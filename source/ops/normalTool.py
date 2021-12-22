@@ -263,28 +263,30 @@ def draw_callback(self, context):
     normLength = context.scene.normal_brush_props.normal_length
     mS = mathutils.Matrix.Scale(normLength, 4)
 
+    shader.uniform_float("color", (1, 1, 0, 1))
+
     for obj in ctx.selected_objects:
         if obj.type == 'MESH':
             success = obj.update_from_editmode()
             mesh = obj.data
 
-    
             mesh.calc_normals_split()
+            coordsNormals = []
             
             for l in mesh.loops:
                     
                 v = mesh.vertices[l.vertex_index]
-                m = calc_vertex_transform(obj, v.co, l.normal)
-                m = m @ mS
+                coordsNormals.append(v.co)
+                coordsNormals.append(v.co + l.normal * normLength)
 
-        
-                gpu.matrix.push()
-                
-                gpu.matrix.multiply_matrix(m)
-                shader.uniform_float("color", (1, 1, 0, 1))
-                batchLine.draw(shader)
-                
-                gpu.matrix.pop()
+            batchNormals = batch_for_shader(shader, 'LINES', {"pos": coordsNormals})
+    
+            gpu.matrix.push()
+            
+            gpu.matrix.multiply_matrix(obj.matrix_world)
+            batchNormals.draw(shader)
+            
+            gpu.matrix.pop()
 
     bgl.glDisable(bgl.GL_DEPTH_TEST)
 
