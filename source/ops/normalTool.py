@@ -434,7 +434,6 @@ class ModalDrawOperator(bpy.types.Operator):
         
 
         if result:
-        
             for obj in ctx.selected_objects:
                 if obj.type == 'MESH':
                     mesh = obj.data
