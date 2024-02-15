@@ -138,6 +138,12 @@ class NormalToolSettings(bpy.types.PropertyGroup):
         default = False
     )
     
+    use_shape_keys : bpy.props.BoolProperty(
+        name="Use Shape Keys", 
+        description = "Edit the currently active shape key instead of the base mesh.",
+        default = False
+    )
+    
 
 #---------------------------
         
@@ -150,7 +156,7 @@ coordsNormal = [(0, 0, 0), (0, 0, 1)]
 vecZ = mathutils.Vector((0, 0, 1))
 vecX = mathutils.Vector((1, 0, 0))
 
-shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 batchLine = batch_for_shader(shader, 'LINES', {"pos": coordsNormal})
 batchCircle = batch_for_shader(shader, 'LINE_STRIP', {"pos": coordsCircle})
 
@@ -219,7 +225,7 @@ def draw_callback(self, context):
 
     shader.bind();
 
-    bgl.glEnable(bgl.GL_DEPTH_TEST)
+    #bgl.glEnable(bgl.GL_DEPTH_TEST)
     
     #Draw cursor
     if self.show_cursor:
@@ -265,10 +271,15 @@ def draw_callback(self, context):
 
     shader.uniform_float("color", (1, 1, 0, 1))
 
+    use_shape_keys = context.scene.normal_brush_props.use_shape_keys
+
     for obj in ctx.selected_objects:
         if obj.type == 'MESH':
             success = obj.update_from_editmode()
             mesh = obj.data
+                
+            if use_shape_keys and obj.active_shape_key:
+                mesh = obj.active_shape_key.data
 
             mesh.calc_normals_split()
             coordsNormals = []
@@ -288,7 +299,7 @@ def draw_callback(self, context):
             
             gpu.matrix.pop()
 
-    bgl.glDisable(bgl.GL_DEPTH_TEST)
+    #bgl.glDisable(bgl.GL_DEPTH_TEST)
 
 
 
@@ -437,6 +448,14 @@ class ModalDrawOperator(bpy.types.Operator):
             for obj in ctx.selected_objects:
                 if obj.type == 'MESH':
                     mesh = obj.data
+                    
+                    #--------------------------------
+                    activeShapeKey = obj.active_shape_key
+                    #mesh2 = activeShapeKey.data
+                    
+                    #mesh2.shape_keys
+                    #--------------------------------
+                    
                     mesh.use_auto_smooth = True
                     
                     mesh.calc_normals_split()
@@ -661,6 +680,7 @@ class ModalDrawOperator(bpy.types.Operator):
             return {'PASS_THROUGH'}
 
         elif event.type == 'MOUSEMOVE':
+            context.window.cursor_set("PAINT_BRUSH")
             self.mouse_move(context, event)
             
             if self.dragging:
@@ -687,6 +707,7 @@ class ModalDrawOperator(bpy.types.Operator):
         
         elif event.type in {'RET'}:
             if event.value == 'RELEASE':
+                context.window.cursor_set("DEFAULT")
                 bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
                 self.history_clear(context)
                 return {'FINISHED'}
@@ -709,6 +730,7 @@ class ModalDrawOperator(bpy.types.Operator):
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             if event.value == 'RELEASE':
                 bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                context.window.cursor_set("DEFAULT")
                 self.history_restore_bookmark(context, 0)
                 self.history_clear(context)            
                 return {'CANCELLED'}
@@ -725,6 +747,8 @@ class ModalDrawOperator(bpy.types.Operator):
             self._context = context
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, args, 'WINDOW', 'POST_VIEW')
 
+            bpy.context.window.cursor_set("PAINT_BRUSH")
+            
             redraw_all_viewports(context)
             self.history_clear(context)
             self.history_snapshot(context)
@@ -847,6 +871,7 @@ class NormalToolPropsPanel(bpy.types.Panel):
         col.prop(settings, "front_faces_only")
 #        col.prop(settings, "selected_verts_only")
         col.prop(settings, "selected_faces_only")
+        col.prop(settings, "use_shape_keys")
 
         col.label(text="Brush Type:")
         col.prop(settings, "brush_type", expand = True)
@@ -875,6 +900,8 @@ class NormalToolPropsPanel(bpy.types.Panel):
         elif brush_type == "ATTRACT" or brush_type == "REPEL":
             col = layout.column();
             col.prop(settings, "target")
+            
+        
         
 
 #---------------------------

@@ -39,17 +39,9 @@ def copytree(src, dst):
 
 def make(copyToBlenderAddons = False, createArchive = False):
     projectName = 'normalBrush'
+    version = '_1_2_0_for_blender_4'
     
     blenderHome = None
-    # platSys = platform.system()
-    # if platSys == 'Windows':
-        # appData = os.getenv('APPDATA')
-        # blenderHome = os.path.join(appData, "Blender Foundation/Blender/2.92")
-        
-    # elif platSys == 'Linux':
-        # home = os.getenv('HOME')
-        # blenderHome = os.path.join(home, ".config/blender/2.92/")
-
 
     blenderHome = os.getenv('BLENDER_HOME')
 
@@ -69,7 +61,7 @@ def make(copyToBlenderAddons = False, createArchive = False):
             shutil.rmtree('deploy')
         os.mkdir('deploy')
 
-        shutil.make_archive("deploy/" + projectName, "zip", "build")
+        shutil.make_archive("deploy/" + projectName + version, "zip", "build")
 
 
     if copyToBlenderAddons: 
