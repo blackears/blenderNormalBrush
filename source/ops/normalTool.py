@@ -281,7 +281,7 @@ def draw_callback(self, context):
             if use_shape_keys and obj.active_shape_key:
                 mesh = obj.active_shape_key.data
 
-            mesh.calc_normals_split()
+            #mesh.calc_normals_split()
             coordsNormals = []
             
             for l in mesh.loops:
@@ -456,9 +456,9 @@ class ModalDrawOperator(bpy.types.Operator):
                     #mesh2.shape_keys
                     #--------------------------------
                     
-                    mesh.use_auto_smooth = True
+                    #mesh.use_auto_smooth = True
                     
-                    mesh.calc_normals_split()
+                    #mesh.calc_normals_split()
 
                     #Calc normal for smoothing
                     if brush_type == "SMOOTH":
