@@ -51,9 +51,15 @@ While the tool is running, you can use **CTRL-Z** to undo your most recent brush
 ##### Cancelling
 Pressing **Esc** or **Right Mouse Click** will cancel your editing, discarding all changes.
 
-### Fix Seam Normals Tool
+### Seam Normal Tools
 
-Also included under the **Fix Seam Normals** menu is a control to automatically copy normals across seams.  Simply select two or more objects with edges that meet.  Then press the **Copy Seam Normals** button.  The normals from the active object will be copied to the other selected objects wherever the selected object' vertex is snapped to the same spot as the active object's vertex.
+#### Smooth Seam Normals
+
+Also included under the **Seam Normals** menu is a control to automatically smooth normals across separate objects.  Simply select two or more objects with edges that meet.  Then press the **Smooth Seam Normals** button.  The normals on the boundary edge of the selected objects will be averaged with the geometry of all other selected objects and the split normals updated to create a seamless surface.  This can be used after using the Separate command to make the two separate piees appear to be one again.
+
+#### Copy Seam Normals
+
+There is another button for **Copy Seam Normals**.  The will copy the normals of the vertices on the edge boundary of the active object to all other selected objects.
 
 ## Building
 

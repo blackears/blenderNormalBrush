@@ -39,7 +39,7 @@ def copytree(src, dst):
 
 def make(copyToBlenderAddons = False, createArchive = False):
     projectName = 'normalBrush'
-    version = '_1_2_0_for_blender_4'
+    version = '_1_4_0_for_blender_4'
     
     blenderHome = None
 
