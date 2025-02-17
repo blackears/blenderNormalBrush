@@ -14,6 +14,62 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
+"""
+            
+    def execute_(self, context):
+        self.seam_verts = []
+        
+        active = context.active_object
+        if active == None or active.type != 'MESH':
+            self.report({"WARNING"}, "No active object selected or active object is not a mesh")
+#            push_error("No active object selected or active object is not a mesh")
+            return {'FINISHED'}
+
+        active_mesh = active.data
+        
+        for la in active_mesh.loops:
+            self.find_partner(context, active_mesh, la)
+
+        self.active_to_selected(context, active_mesh)
+                    
+        return {'FINISHED'}
+
+###################
+###################
+###################
+###################
+
+    def execute_2(self, context):
+        epsilon = .00001
+        
+        active = context.active_object
+        neighbors = [p for p in context.selected_objects if p.type == 'MESH' and p != context.active_object]
+        
+        if active == None or active.type != 'MESH':
+            self.report({"WARNING"}, "No active object selected or active object is not a mesh")
+            return {'CANCELLED'}
+
+        weighted_normal = mathutils.Vector((0, 0, 0))
+
+        for la in active_mesh.loops:
+            mesh_l = active_mesh.data
+            
+            for neighbor in neighbors:
+                mesh_p = neighbor.data
+                for lp in in mesh_p.loops:
+                    vp = mesh.vertices[lp.vertex_index]
+                    if (vl.co - vp.co).length < epsilon:
+                        weighted_normal += vp.
+                        
+                    
+            
+            #for l_peer in 
+            
+            
+            #self.find_partner(context, active_mesh, la)
+
+"""
+
 import bpy
 import bpy.utils.previews
 import bmesh
@@ -124,22 +180,75 @@ class FixSeamNormalsOperator(bpy.types.Operator):
                         self.seam_verts.append(la)
                         return
 
-            
+
     def execute(self, context):
-        self.seam_verts = []
+        epsilon = .00001
         
-        active = context.active_object
-        if active == None or active.type != 'MESH':
-            print ("No active object selected or active object is not a mesh")
-            return {'FINISHED'}
+        objs = [p for p in context.selected_objects if p.type == 'MESH']
+        if not objs:
+            self.report({"WARNING"}, "No active object selected or active object is not a mesh")
+            return {'CANCELLED'}
 
-        active_mesh = active.data
+        bm_meshes = []
+        for obj in objs:
+            bm = bmesh.new()
+            bm.from_mesh(obj.data)
+            bm_meshes.append(bm)
+
+        #Find loops on edge
+        update_loops = []
+        update_normals = {}
         
-        for la in active_mesh.loops:
-            self.find_partner(context, active_mesh, la)
+        for obj, bm in zip(objs, bm_meshes):
+            for face in bm.faces:
+                for lp in face.loops:
+                    if lp.edge.is_boundary or lp.link_loop_prev.edge.is_boundary:
+                        update_loops.append((obj, bm, lp))
 
-        self.active_to_selected(context, active_mesh)
+
+        for obj, bm, loop_focus in update_loops:
+            weighted_normal = mathutils.Vector((0, 0, 0))
+ #           adjacency = 0
+            
+            for obj_peer, bm_peer, loop_peer in update_loops:
+                if (loop_peer.vert.co - loop_focus.vert.co).length < epsilon:
+                    weighted_normal += loop_peer.face.normal * loop_peer.calc_angle()
+#                    adjacency += 1
                     
+#            print("adjacency ", adjacency)
+           
+            weighted_normal.normalize()
+            key = (obj.name, loop_focus.index)
+#            print("key ", key)
+            update_normals[key] = weighted_normal
+            
+            #loop_focus.vert.normal = weighted_normal
+        
+#        for ul in update_loops.keys():
+#            print("adjacency ", length(update_loops[ul]))
+        
+        for obj in objs:
+            mesh = obj.data
+            
+            normals = []
+            for loop in mesh.loops:
+                #v = obj.vertices[loop.vertex_index]
+                key = (obj.name, loop.index)
+                if key in update_normals:
+                    normals.append(update_normals[key])
+                else:
+                    normals.append(mathutils.Vector((0, 0, 0)))
+                
+            mesh.normals_split_custom_set(normals)
+            
+#            mesh.customdata_custom_splitnormals_clear()
+        
+        #Write back to source meshes
+        for bm, obj in zip(bm_meshes, objs):
+            #bm.to_mesh(obj.data)
+            bm.free()
+            
+            
         return {'FINISHED'}
         
 #---------------------------
