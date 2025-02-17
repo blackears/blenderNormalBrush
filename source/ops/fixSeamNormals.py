@@ -80,10 +80,10 @@ import math
 
 #---------------------------
 
-class FixSeamNormalsOperator(bpy.types.Operator):
-    """Copy normals from active mesh to selected meshes along seam"""
-    bl_idname = "kitfox.nt_fix_seam_normals"
-    bl_label = "Fix Seam Normals"
+class CopySeamNormalsOperator(bpy.types.Operator):
+    """Copy normals from active mesh to selected meshes along seam."""
+    bl_idname = "kitfox.nt_copy_seam_normals"
+    bl_label = "Copy Seam Normals"
     bl_options = {"REGISTER", "UNDO"}
 
     def __init__(self):
@@ -180,6 +180,56 @@ class FixSeamNormalsOperator(bpy.types.Operator):
                         self.seam_verts.append(la)
                         return
 
+    def execute(self, context):
+        epsilon = .00001
+        
+        active_obj = context.active_object
+        if not active_obj.type == 'MESH':
+            self.report({"WARNING"}, "Active object is not a mesh")
+            return {'CANCELLED'}
+        
+        neighbor_objs = [p for p in context.selected_objects if p.type == 'MESH' and p != context.active_object]
+        if not neighbor_objs:
+            self.report({"WARNING"}, "No objects to copy to selected")
+            return {'CANCELLED'}
+
+        bm = bmesh.new()
+        bm.from_mesh(active_obj.data)
+        
+        update_loops = []
+        
+        for face in bm.faces:
+            for lp in face.loops:
+                if lp.edge.is_boundary or lp.link_loop_prev.edge.is_boundary:
+                    update_loops.append(lp)
+
+        for nobj in neighbor_objs:
+            mesh = nobj.data
+            
+            normals = []
+
+            for loop in mesh.loops:
+                vert = mesh.vertices[loop.vertex_index]
+                
+                normal = mathutils.Vector((0, 0, 0))
+                for lp in update_loops:
+                    if (lp.vert.co - vert.co).length < epsilon:
+                        normal = lp.calc_normal()
+                        break
+                
+                normals.append(normal)
+                
+            mesh.normals_split_custom_set(normals)
+
+        return {'FINISHED'}
+
+#---------------------------
+
+class SmoothSeamNormalsOperator(bpy.types.Operator):
+    """Calculate smoothed normal on boundary vertices where they are coincident with vertices of adjacent meshes."""
+    bl_idname = "kitfox.nt_smooth_seam_normals"
+    bl_label = "Smooth Seam Normals"
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         epsilon = .00001
@@ -208,31 +258,20 @@ class FixSeamNormalsOperator(bpy.types.Operator):
 
         for obj, bm, loop_focus in update_loops:
             weighted_normal = mathutils.Vector((0, 0, 0))
- #           adjacency = 0
             
             for obj_peer, bm_peer, loop_peer in update_loops:
                 if (loop_peer.vert.co - loop_focus.vert.co).length < epsilon:
                     weighted_normal += loop_peer.face.normal * loop_peer.calc_angle()
-#                    adjacency += 1
-                    
-#            print("adjacency ", adjacency)
            
             weighted_normal.normalize()
             key = (obj.name, loop_focus.index)
-#            print("key ", key)
             update_normals[key] = weighted_normal
             
-            #loop_focus.vert.normal = weighted_normal
-        
-#        for ul in update_loops.keys():
-#            print("adjacency ", length(update_loops[ul]))
-        
         for obj in objs:
             mesh = obj.data
             
             normals = []
             for loop in mesh.loops:
-                #v = obj.vertices[loop.vertex_index]
                 key = (obj.name, loop.index)
                 if key in update_normals:
                     normals.append(update_normals[key])
@@ -240,29 +279,24 @@ class FixSeamNormalsOperator(bpy.types.Operator):
                     normals.append(mathutils.Vector((0, 0, 0)))
                 
             mesh.normals_split_custom_set(normals)
-            
-#            mesh.customdata_custom_splitnormals_clear()
         
         #Write back to source meshes
         for bm, obj in zip(bm_meshes, objs):
-            #bm.to_mesh(obj.data)
             bm.free()
-            
             
         return {'FINISHED'}
         
 #---------------------------
 
-class FixSeamNormalPropsPanel(bpy.types.Panel):
+class SeamNormalPropsPanel(bpy.types.Panel):
 
     """Properties Panel for the Normal Tool on tool shelf"""
-    bl_label = "Fix Seam Normals"
-    bl_idname = "OBJECT_PT_fix_seam_normals_props"
+    bl_label = "Seam Normals"
+    bl_idname = "OBJECT_PT_seam_normals_props"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Kitfox - Normal"
 
-        
 
     def draw(self, context):
         layout = self.layout
@@ -270,40 +304,26 @@ class FixSeamNormalPropsPanel(bpy.types.Panel):
         scene = context.scene
         
         col = layout.column();
-        col.operator("kitfox.nt_fix_seam_normals", text="Copy Seam Normals")
-        
-#---------------------------
+        col.operator("kitfox.nt_copy_seam_normals")
+        col.operator("kitfox.nt_smooth_seam_normals")
 
-class SeparateWithNormalsOperator(bpy.types.Operator):
-    """Separate selected faces from mesh but presserve normals"""
-    bl_idname = "kitfox.nt_fix_seam_normals"
-    bl_label = "Fix Seam Normals"
-
-    def execute(self, context):
-        
-        active = context.active_object
-        if active == None or active.type != 'MESH':
-            print ("No active object selected or active object is not a mesh")
-            return {'FINISHED'}
-
-        active_mesh = active.data
-        
-        bm = bmesh.new()
-        bm.from_mesh(active_mesh)
-        
 
 #---------------------------
 
 def register():
 
-    bpy.utils.register_class(FixSeamNormalsOperator)
-    bpy.utils.register_class(FixSeamNormalPropsPanel)
+    bpy.utils.register_class(SmoothSeamNormalsOperator)
+    bpy.utils.register_class(CopySeamNormalsOperator)
+    bpy.utils.register_class(SeamNormalPropsPanel)
 
 
 
 def unregister():
-    bpy.utils.unregister_class(FixSeamNormalsOperator)
-    bpy.utils.unregister_class(FixSeamNormalPropsPanel)
+    bpy.utils.unregister_class(SmoothSeamNormalsOperator)
+    bpy.utils.unregister_class(CopySeamNormalsOperator)
+    bpy.utils.unregister_class(SeamNormalPropsPanel)
+    # bpy.utils.unregister_class(FixSeamNormalsOperator)
+    # bpy.utils.unregister_class(FixSeamNormalPropsPanel)
 
     
 
