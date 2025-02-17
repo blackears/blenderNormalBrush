@@ -53,9 +53,14 @@ Pressing **Esc** or **Right Mouse Click** will cancel your editing, discarding a
 
 ### Seam Normal Tools
 
+These tools adjust the normals on the boundaries of objects.
+
 #### Smooth Seam Normals
 
-Also included under the **Seam Normals** menu is a control to automatically smooth normals across separate objects.  Simply select two or more objects with edges that meet.  Then press the **Smooth Seam Normals** button.  The normals on the boundary edge of the selected objects will be averaged with the geometry of all other selected objects and the split normals updated to create a seamless surface.  This can be used after using the Separate command to make the two separate piees appear to be one again.
+Use this after you Separate a smooth mesh into two pieces and want to make the edge normals match up like they're still connected while still keeping them as separate objects.
+
+Select two or more objects with edges that meet.  Then press the **Smooth Seam Normals** button.  The normals on the boundary edge of the selected objects will be averaged with the geometry of all other selected objects and the split normals updated to create a seamless surface.
+
 
 #### Copy Seam Normals
 
