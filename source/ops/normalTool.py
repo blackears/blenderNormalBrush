@@ -311,7 +311,8 @@ class ModalDrawOperator(bpy.types.Operator):
     bl_label = "Normal Tool Kitfox"
     bl_options = {"REGISTER", "UNDO"}
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.dragging = False
         
         self.cursor_pos = None
@@ -323,6 +324,9 @@ class ModalDrawOperator(bpy.types.Operator):
         self.history_bookmarks = {}
         
         self.stroke_trail = []
+
+    def __del__(self):
+        super().__del__()
         
     def free_snapshot(self, map):
         for obj in map:
@@ -768,8 +772,12 @@ class NormalPickerOperator(bpy.types.Operator):
     bl_label = "Pick Normal"
     bl_options = {"REGISTER", "UNDO"}
     
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.picking = False
+
+    def __del__(self):
+        super().__del__()
 
     def mouse_down(self, context, event):
         mouse_pos = (event.mouse_region_x, event.mouse_region_y)
